@@ -114,10 +114,6 @@ Open `whats-on.html` and add a new two-column block inside the `#announcements` 
 
 ---
 
-## Design Reference
-
-The design is inspired by [Mosaic Baptist Church](https://www.mosaicbaptist.org.au/) — clean white layout, large hero images, dark navy navigation, and clear section structure.
-
 **Colour palette:**
 
 | Name | Hex |
