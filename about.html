@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — WynLife Church</title>
+  <link rel="icon" type="image/png" href="assets/shared/Favicon_Logo.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .pastor-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 560px;
+      display: flex;
+      gap: 0;
+    }
+    .pastor-photo {
+      width: 260px;
+      flex-shrink: 0;
+      object-fit: cover;
+      object-position: center top;
+    }
+    .pastor-info {
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .pastor-role {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+    .pastor-name {
+      font-family: 'Merriweather', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.25;
+      margin-bottom: 14px;
+    }
+    .pastor-bio {
+      font-size: 0.9rem;
+      color: var(--gray);
+      line-height: 1.7;
+    }
+    @media (max-width: 600px) {
+      .pastor-card { flex-direction: column; max-width: 100%; }
+      .pastor-photo { width: 100%; height: 300px; }
+    }
+  </style>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+
+<div class="page-hero">
+  <img src="assets/about/hero.JPG" alt="About WynLife Church">
+  <div class="page-hero-overlay"></div>
+  <div class="page-hero-content">
+    <h1>About WynLife Church</h1>
+    <p>A vibrant, multicultural community in Melbourne's west — following Jesus together.</p>
+  </div>
+</div>
+
+<div class="page-subnav">
+  <div class="page-subnav-inner">
+    <a href="#about-us">About Us</a>
+    <a href="#beliefs">Bible Beliefs</a>
+    <a href="#leadership">Leadership</a>
+  </div>
+</div>
+
+<div class="page-content">
+
+  <!-- About Us -->
+  <div class="section-block" id="about-us">
+    <div class="two-col" style="align-items:center;">
+      <div>
+        <div class="section-label">Who We Are</div>
+        <h2 class="section-title">About WynLife Church</h2>
+        <hr class="divider">
+        <p class="section-body">WynLife Church is a vibrant, multicultural Christian community located in the Wyndham area of Melbourne's west. We are a church for all people — regardless of background, culture, or where you are in your journey with God.</p>
+        <p class="section-body mt-16">We gather every Sunday at 10:00 AM at 208 Ballan Rd, Wyndham Vale, and throughout the week in Life Groups and other ministries across the local area.</p>
+        <p class="section-body mt-16">Our heart is to see people come to know Jesus, grow in faith, and make a real difference in our community and beyond.</p>
+      </div>
+      <div>
+        <img src="assets/about/congregation.JPG" alt="WynLife Community" class="photo-half">
+      </div>
+    </div>
+  </div>
+
+  <!-- Large congregation photo -->
+  <img src="assets/about/sunday_service.JPG" alt="Sunday Service" class="photo-full">
+
+  <!-- Bible Beliefs -->
+  <div class="section-block" id="beliefs">
+    <div class="two-col" style="align-items:start;">
+      <div>
+        <div class="section-label">What We Believe</div>
+        <h2 class="section-title">Our Bible Beliefs</h2>
+        <hr class="divider">
+        <p class="section-body">WynLife Church is grounded in the historic Christian faith as revealed in Scripture. We hold to the following core beliefs:</p>
+        <div class="belief-list mt-24">
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>The Bible</strong> — The Scriptures of the Old and New Testaments are the inspired, infallible, and authoritative Word of God.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>The Trinity</strong> — There is one God, eternally existing in three persons: Father, Son, and Holy Spirit.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>Jesus Christ</strong> — We believe in the deity, virgin birth, sinless life, substitutionary death, bodily resurrection, and ascension of Jesus Christ.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>Salvation</strong> — Salvation is by grace through faith in Jesus Christ alone, not by works. All who repent and trust in Christ are saved and given eternal life.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>The Church</strong> — The Church is the body of Christ, called to worship God, grow in discipleship, and serve the world with the gospel.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>The Holy Spirit</strong> — The Holy Spirit indwells every believer, empowering them to live a godly life and to serve effectively for the Kingdom of God.</span></div>
+          <div class="belief-item"><span class="belief-icon">&#10022;</span><span><strong>The Return of Christ</strong> — We believe in the personal, visible return of Jesus Christ to establish His Kingdom and judge the living and the dead.</span></div>
+        </div>
+      </div>
+      <div>
+        <img src="assets/about/bible_study.png" alt="Bible Study" class="photo-third">
+        <img src="assets/about/worship.JPG" alt="Worship" class="photo-third" style="margin-top:12px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Leadership -->
+  <div class="section-block" id="leadership" style="background:var(--gray-light);margin:0 -40px;padding:72px 40px;">
+    <div class="text-center mb-32">
+      <div class="section-label">Our People</div>
+      <h2 class="section-title">Leadership</h2>
+      <hr class="divider">
+      <p class="section-body">WynLife is led by a committed team of pastors and leaders who are passionate about God's mission in Melbourne's west.</p>
+    </div>
+
+    <!-- Head Pastor feature card -->
+    <div style="display:flex;justify-content:center;margin-bottom:56px;">
+      <div class="pastor-card">
+        <img src="assets/about/head_pastor.JPG" alt="Ps Jimm and Pynqi Gorgonia" class="pastor-photo">
+        <div class="pastor-info">
+          <div class="pastor-role">Head Pastor</div>
+          <div class="pastor-name">Ps Jimm &amp; Pynqi Gorgonia</div>
+          <p class="pastor-bio">Ps Jimm and Pynqi lead WynLife Church with a passionate heart for the Wyndham community. Together they serve our church family and are committed to seeing people come to know Jesus and grow in faith.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Large congregation photo -->
+    <img src="assets/about/congregation.JPG" alt="WynLife Church Congregation" class="photo-full" style="margin-bottom:32px;">
+
+    <div class="photo-grid-3 mt-32">
+      <img src="assets/about/leadership_team.JPG" alt="Leadership Team" style="height:320px;object-fit:cover;border-radius:4px;">
+      <img src="assets/about/leadership_2.JPG" alt="Pastoral Team" style="height:320px;object-fit:cover;border-radius:4px;">
+      <img src="assets/about/leadership_3.JPG" alt="Church Leaders" style="height:320px;object-fit:cover;border-radius:4px;">
+    </div>
+
+    <div class="text-center mt-32">
+      <p style="font-size:1rem;color:var(--gray);max-width:560px;margin:0 auto 24px;">Our pastoral team is here to serve you. We'd love to meet you — please don't hesitate to introduce yourself after a Sunday service or reach out to us.</p>
+      <a href="pray.html" class="btn btn-primary">Contact Our Team</a>
+    </div>
+  </div>
+
+</div>
+
+<div id="footer-placeholder"></div>
+<script src="nav.js"></script>
+</body>
+</html>
