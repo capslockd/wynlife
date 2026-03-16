@@ -689,7 +689,18 @@ hr.divider {
 .page-subnav a:hover,
 .page-subnav a.active { color: var(--blue); border-bottom-color: var(--blue); }
 
+/* ── BLEED GRAY SECTIONS (full-width background) ── */
+.section-bleed-gray {
+  background: var(--gray-light);
+  margin: 0 -40px;
+  padding: 72px 40px;
+}
+
 /* ── RESPONSIVE ── */
+
+/* Prevent ANY element from causing horizontal overflow */
+*, *::before, *::after { max-width: 100%; }
+
 @media (max-width: 1024px) {
   .two-col { grid-template-columns: 1fr; gap: 36px; }
   .two-col.img-right > :first-child { order: 0; }
@@ -700,25 +711,183 @@ hr.divider {
 }
 
 @media (max-width: 768px) {
+  /* --- Global --- */
+  body { overflow-x: hidden; }
+
+  /* --- Nav --- */
   .top-bar { display: none; }
-  .nav-inner { padding: 0 20px; }
+  .nav-inner { padding: 0 16px; height: 64px; }
+  .nav-logo img { height: 40px; }
   .nav-menu { display: none; }
   .hamburger { display: flex; }
-  .page-content { padding: 0 20px; }
-  .service-strip { padding: 20px; }
-  .service-item { padding: 8px 20px; }
-  .page-hero-content { padding: 28px 24px; }
-  .photo-grid-3 { grid-template-columns: 1fr 1fr; }
-  .form-grid { grid-template-columns: 1fr; }
-  .section-block { padding: 48px 0; }
-  .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+
+  /* --- Page content padding --- */
+  .page-content { padding: 0 16px; }
+
+  /* --- Service strip: stack items vertically --- */
+  .service-strip {
+    padding: 20px 16px;
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+  }
+  .service-item {
+    padding: 12px 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .service-item:last-child { border-bottom: none; }
+
+  /* --- Page hero --- */
+  .page-hero { height: 40vh; min-height: 220px; }
+  .page-hero-content { padding: 20px 16px; }
+  .page-hero-content h1 { font-size: clamp(1.6rem, 7vw, 2.4rem); }
+  .page-hero-content p { font-size: 0.95rem; }
+
+  /* --- Home hero --- */
+  .home-hero { min-height: 500px; }
+  .home-hero-content { padding: 0 16px; }
+  .home-hero-content h1 { font-size: clamp(1.8rem, 8vw, 2.8rem); margin-bottom: 14px; }
+  .home-hero-content p { font-size: 1rem; margin-bottom: 24px; }
+  .hero-btns { flex-direction: column; align-items: center; gap: 12px; }
+  .btn-hero-primary,
+  .btn-hero-outline { width: 100%; max-width: 280px; text-align: center; padding: 14px 24px; }
+
+  /* --- Section blocks --- */
+  .section-block { padding: 40px 0; }
+  .section-title { font-size: clamp(1.4rem, 5vw, 2rem); }
+
+  /* --- Bleed gray sections + any remaining inline negative margins --- */
+  .section-bleed-gray,
+  .section-block[style*="margin:0 -40px"],
+  [style*="margin:0 -40px;padding:72px 40px"] {
+    margin: 0 -16px !important;
+    padding: 40px 16px !important;
+  }
+
+  /* --- Override ALL hardcoded inline image heights on mobile --- */
+  img[style*="height:"] {
+    height: auto !important;
+    max-height: 62vw;
+    width: 100% !important;
+  }
+  /* Keep photo class sizing controlled */
+  .photo-full, .photo-half, .photo-third { height: auto !important; max-height: 62vw; width: 100%; }
+
+  /* --- Photo sizes --- */
+  .photo-full  { height: 40vw; min-height: 200px; }
+  .photo-half  { height: 56vw; min-height: 220px; }
+  .photo-third { height: 52vw; min-height: 180px; }
+
+  /* --- Photo grids --- */
+  .photo-grid-2 { grid-template-columns: 1fr; }
+  .photo-grid-3 { grid-template-columns: 1fr; }
+  .photo-grid-2 img,
+  .photo-grid-3 img { height: 52vw !important; min-height: 180px; }
   .photo-strip { grid-template-columns: 1fr; }
   .photo-strip img:first-child { grid-column: 1; }
+  .photo-strip img { height: 52vw !important; min-height: 180px; }
+
+  /* --- Cards --- */
+  .card-grid { grid-template-columns: 1fr; gap: 20px; }
+  .card-img { height: 52vw; min-height: 180px; }
+  .card-img img { height: 100%; }
+
+  /* --- Step cards --- */
+  .step-cards { grid-template-columns: 1fr !important; gap: 16px; }
+
+  /* --- Dark banner --- */
+  .dark-banner { padding: 40px 16px; }
+  .dark-banner h2 { font-size: 1.4rem; }
+  .dark-banner p { font-size: 0.95rem; }
+
+  /* --- Info box --- */
+  .info-box { padding: 24px 20px; }
+
+  /* --- Buttons --- */
+  .btn { padding: 12px 20px; font-size: 0.82rem; }
+
+  /* --- Sub-nav: make scrollable --- */
+  .page-subnav { padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .page-subnav-inner { flex-wrap: nowrap; min-width: max-content; }
+  .page-subnav a { padding: 12px 14px; font-size: 0.75rem; white-space: nowrap; }
+
+  /* --- Form grid: single column --- */
+  .form-grid { grid-template-columns: 1fr; }
+
+  /* --- Footer --- */
+  footer { padding: 40px 16px 20px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; padding-bottom: 28px; }
+  .footer-bottom { flex-direction: column; text-align: center; gap: 8px; }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 480px) {
+  /* --- Nav --- */
+  .nav-inner { height: 58px; }
+  .nav-logo img { height: 34px; }
+
+  /* --- Service strip --- */
+  .service-value { font-size: 0.92rem; }
+  .service-detail { font-size: 0.75rem; }
+
+  /* --- All grid columns forced single on small screens --- */
+  .step-cards,
+  .card-grid,
   .photo-grid-2,
-  .photo-grid-3 { grid-template-columns: 1fr; }
-  .step-cards { grid-template-columns: 1fr; }
-  .card-grid { grid-template-columns: 1fr; }
+  .photo-grid-3,
+  .photo-strip,
+  .pray-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* --- Inline two-col grids --- */
+  [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* --- Inline photo grids in next-steps (share jesus) --- */
+  .photo-grid-2[style],
+  .photo-grid-3[style] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* --- About pastor card --- */
+  .pastor-card { flex-direction: column; max-width: 100%; }
+  .pastor-photo { width: 100%; height: 64vw; min-height: 220px; object-fit: cover; }
+  .pastor-info { padding: 20px; }
+
+  /* --- Inline flex button rows --- */
+  [style*="display:flex;gap:14px;flex-wrap:wrap"],
+  [style*="display:flex; gap:14px; flex-wrap:wrap"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  [style*="display:flex;gap:14px;flex-wrap:wrap"] .btn,
+  [style*="display:flex; gap:14px; flex-wrap:wrap"] .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* --- max-width constraints that cause overflow --- */
+  [style*="max-width:900px"],
+  [style*="max-width:560px"],
+  [style*="max-width:540px"] {
+    max-width: 100% !important;
+  }
+
+  /* --- Dark banner --- */
+  .dark-banner { padding: 32px 16px; }
+  .dark-banner h2 { font-size: 1.25rem; }
+  .btn-hero-primary, .btn-hero-outline { display: block; width: 100%; max-width: 100%; box-sizing: border-box; }
+
+  /* --- Section title even smaller --- */
+  .section-title { font-size: clamp(1.25rem, 6vw, 1.6rem); }
+
+  /* --- Info box --- */
+  .info-box { padding: 20px 16px; }
+  .info-row { gap: 10px; }
+
+  /* --- Footer --- */
+  footer { padding: 32px 16px 20px; }
 }
