@@ -187,32 +187,38 @@ a:hover { color: var(--navy); text-decoration: underline; }
 }
 
 /* ── MOBILE FULL-SCREEN MENU ──
-   Appended directly to <body> — position:fixed always works.
-   Uses display:none by default, display:flex when .open is added. */
+   Appended directly to <body> by nav.js so position:fixed
+   is never trapped by a parent stacking context.           */
 .mobile-nav {
-  display: none;
+  /* Use visibility + opacity instead of display toggle
+     so the menu is never accidentally "always visible"
+     due to a CSS specificity war with display:flex */
+  display: flex;
+  flex-direction: column;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9999;
   background: var(--navy);
   padding: 72px 28px 40px;
-  flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Hidden state */
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition: transform 0.28s ease, opacity 0.28s ease, visibility 0s linear 0.28s;
 }
 .mobile-nav.open {
-  display: flex;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition: transform 0.28s ease, opacity 0.28s ease, visibility 0s linear 0s;
 }
 
 /* Prevent body scroll when menu is open */
-body.menu-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-}
+body.menu-open { overflow: hidden; }
 
 
 .mobile-nav a {
