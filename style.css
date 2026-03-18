@@ -114,7 +114,7 @@ a:hover { color: var(--navy); text-decoration: underline; }
   text-decoration: none;
 }
 
-/* Dropdown */
+/* Desktop dropdown */
 .nav-dropdown {
   display: none;
   position: absolute;
@@ -158,117 +158,234 @@ a:hover { color: var(--navy); text-decoration: underline; }
   transition: background 0.2s !important;
 }
 .nav-cta-btn:hover {
-  background: var(--navy) !important;
+  background: var(--blue-light) !important;
   text-decoration: none !important;
 }
 
-/* Hamburger — hidden on desktop, shown on mobile via breakpoint */
+/* ── HAMBURGER TRIGGER (Hillsong style: icon + "MENU" label) ── */
 .hamburger {
   display: none;
   flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 4px;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px 8px;
   background: none;
   border: none;
   flex-shrink: 0;
   position: relative;
-  z-index: 10000; /* always above mobile menu overlay */
+  z-index: 10000;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.hamburger span {
+.hamburger-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hamburger-bars span {
   display: block;
-  width: 24px;
+  width: 26px;
   height: 2px;
   background: white;
   border-radius: 2px;
-  transition: 0.25s;
-  pointer-events: none; /* let clicks pass through to button */
+  transition: transform 0.3s, opacity 0.3s;
+  pointer-events: none;
 }
+.hamburger-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.75);
+  text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
+  margin-top: 1px;
+}
+/* Animate bars to X when open */
+.hamburger.is-open .hamburger-bars span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.hamburger.is-open .hamburger-bars span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.hamburger.is-open .hamburger-bars span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+.hamburger.is-open .hamburger-label { opacity: 0; }
 
-/* ── MOBILE FULL-SCREEN MENU ──
-   Appended directly to <body> — position:fixed always works.
-   Uses display:none by default, display:flex when .open is added. */
+/* ══════════════════════════════════════════
+   MOBILE FULL-SCREEN MENU — Hillsong style
+   Full-screen dark overlay, logo at top,
+   large bold links, accordion sub-items
+══════════════════════════════════════════ */
 .mobile-nav {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9999;
-  background: var(--navy);
-  padding: 72px 28px 40px;
+  background: #0d1b33;
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.mobile-nav.open {
-  display: flex;
-}
+.mobile-nav.open { display: flex; }
 
-/* Prevent body scroll when menu is open */
+/* Prevent body scroll while menu open */
 body.menu-open {
   overflow: hidden;
   position: fixed;
   width: 100%;
 }
 
-
-.mobile-nav a {
-  display: block;
-  color: rgba(255,255,255,0.9);
-  text-decoration: none;
-  font-size: 1.1rem;
+/* Top bar inside mobile menu */
+.mob-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 72px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.mob-nav-logo img {
+  height: 44px;
+  width: auto;
+}
+.mob-nav-logo-fallback {
+  display: none;
+  font-family: 'Merriweather', serif;
+  font-size: 1.2rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 15px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  color: white;
 }
-.mobile-nav a:last-child { border-bottom: none; }
-.mobile-nav a.sub {
-  font-size: 0.92rem;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  padding: 10px 16px;
-  color: rgba(255,255,255,0.65);
-}
-.mobile-nav a:hover { color: white; text-decoration: none; }
-.mobile-nav a.mobile-cta {
-  margin-top: 16px;
-  background: var(--blue);
-  color: white !important;
-  text-align: center;
-  padding: 14px 0;
-  border-radius: 3px;
-  border-bottom: none;
-}
-.mobile-nav a.mobile-cta:hover { background: var(--blue-light); }
-
-.mobile-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: rgba(255,255,255,0.12);
+.mob-nav-close {
+  background: none;
   border: none;
   color: white;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   line-height: 1;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
   cursor: pointer;
+  padding: 8px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10001;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
 }
-.mobile-close:hover,
-.mobile-close:active { background: rgba(255,255,255,0.25); }
+.mob-nav-close:hover { color: var(--gold); }
+
+/* Navigation list */
+.mob-nav-list {
+  flex: 1;
+  padding: 12px 0 32px;
+  list-style: none;
+}
+
+/* Top-level item row */
+.mob-nav-item {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.mob-nav-item:last-child { border-bottom: none; }
+
+/* Top-level link + toggle button wrapper */
+.mob-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Top-level link */
+.mob-nav-link {
+  display: block;
+  flex: 1;
+  color: white;
+  text-decoration: none;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 18px 24px;
+  transition: color 0.2s;
+}
+.mob-nav-link:hover { color: var(--gold); text-decoration: none; }
+
+/* Chevron toggle button (for items with sub-links) */
+.mob-nav-toggle {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 18px 24px 18px 8px;
+  line-height: 1;
+  transition: color 0.2s, transform 0.3s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.mob-nav-toggle:hover { color: var(--gold); }
+.mob-nav-item.is-open .mob-nav-toggle {
+  transform: rotate(180deg);
+  color: var(--gold);
+}
+
+/* Sub-link accordion panel */
+.mob-nav-sub {
+  display: none;
+  flex-direction: column;
+  background: rgba(255,255,255,0.04);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.mob-nav-item.is-open .mob-nav-sub { display: flex; }
+
+.mob-nav-sub a {
+  display: block;
+  color: rgba(255,255,255,0.72);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 13px 24px 13px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: color 0.2s, padding-left 0.2s;
+}
+.mob-nav-sub a:last-child { border-bottom: none; }
+.mob-nav-sub a:hover { color: white; padding-left: 38px; text-decoration: none; }
+
+/* CTA at bottom of mobile menu */
+.mob-nav-cta {
+  padding: 24px 24px 32px;
+  flex-shrink: 0;
+}
+.mob-nav-cta a {
+  display: block;
+  background: var(--blue);
+  color: white;
+  text-align: center;
+  padding: 16px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.mob-nav-cta a:hover { background: var(--blue-light); text-decoration: none; }
+
+/* Service time strip in mobile menu */
+.mob-nav-info {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.mob-nav-info p {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+  line-height: 1.6;
+  text-align: center;
+}
+
 
 /* ══════════════════════════════════════════
    HERO — HOME (video)
@@ -288,6 +405,8 @@ body.menu-open {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Ensures no white flash while video loads */
+  background: var(--navy);
 }
 .home-hero-overlay {
   position: absolute;
@@ -1078,7 +1197,7 @@ textarea.field-input { resize: vertical; min-height: 130px; }
   .nav-menu  { display: none; }
   .hamburger {
     display: flex;
-    touch-action: manipulation; /* removes 300ms tap delay on iOS */
+    touch-action: manipulation;
   }
 
   /* Two-col collapses */
