@@ -90,6 +90,7 @@
           <a href="gatherings.html#wednesday-prayer">Wednesday Night Prayer</a>
           <a href="gatherings.html#life-groups">Life Groups</a>
           <a href="gatherings.html#youth">Youth Sunday</a>
+          <a href="gatherings.html#sunday-school">Sunday School</a>
           <a href="gatherings.html#mens-group">Men's Group</a>
           <a href="gatherings.html#womens-group">Women's Group</a>
         </div>
@@ -126,32 +127,110 @@
         <a href="pray.html" class="nav-cta-btn">Let Us Pray For You</a>
       </li>
     </ul>
+    <!-- Hamburger: icon bars + MENU label -->
     <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
-      <span></span><span></span><span></span>
+      <div class="hamburger-bars">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="hamburger-label">Menu</span>
     </button>
   </div>
 </nav>
 
-<!-- Mobile menu — hardcoded here, position:fixed escapes all stacking contexts -->
+<!-- ── MOBILE MENU — Hillsong style ── -->
 <div class="mobile-nav" id="mobileNav">
-  <button class="mobile-close" id="mobileCloseBtn" aria-label="Close menu">&times;</button>
-  <a href="index.html">Home</a>
-  <a href="gatherings.html">Gatherings</a>
-  <a href="gatherings.html#wednesday-prayer" class="sub">&rarr; Wednesday Night Prayer</a>
-  <a href="gatherings.html#life-groups" class="sub">&rarr; Life Groups</a>
-  <a href="gatherings.html#youth" class="sub">&rarr; Youth Sunday</a>
-  <a href="gatherings.html#mens-group" class="sub">&rarr; Men's Group</a>
-  <a href="gatherings.html#womens-group" class="sub">&rarr; Women's Group</a>
-  <a href="church-online.html">Church Online</a>
-  <a href="whats-on.html">What's On</a>
-  <a href="whats-on.html#bible-reading" class="sub">&rarr; Bible Reading</a>
-  <a href="whats-on.html#food-bank" class="sub">&rarr; Food Bank</a>
-  <a href="whats-on.html#fellowship-lunch" class="sub">&rarr; Fellowship Lunch</a>
-  <a href="whats-on.html#mens-book-study" class="sub">&rarr; Men's Book Study</a>
-  <a href="whats-on.html#womens-book-study" class="sub">&rarr; Women's Book Study</a>
-  <a href="next-steps.html">Next Steps</a>
-  <a href="about.html">About</a>
-  <a href="pray.html" class="mobile-cta">Let Us Pray For You</a>
+
+  <!-- Header row: logo + close -->
+  <div class="mob-nav-header">
+    <a href="index.html" class="mob-nav-logo">
+      <img src="assets/shared/Wynlife_Header_Logo.avif" alt="WynLife Church"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="mob-nav-logo-fallback">WynLife</span>
+    </a>
+    <button class="mob-nav-close" id="mobNavClose" aria-label="Close menu">&times;</button>
+  </div>
+
+  <!-- Nav list -->
+  <ul class="mob-nav-list">
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="index.html" class="mob-nav-link">Home</a>
+      </div>
+    </li>
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="gatherings.html" class="mob-nav-link">Gatherings</a>
+        <button class="mob-nav-toggle" aria-label="Expand Gatherings">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="gatherings.html#wednesday-prayer">Wednesday Night Prayer</a>
+        <a href="gatherings.html#life-groups">Life Groups</a>
+        <a href="gatherings.html#youth">Youth Sunday</a>
+        <a href="gatherings.html#sunday-school">Sunday School</a>
+        <a href="gatherings.html#mens-group">Men's Group</a>
+        <a href="gatherings.html#womens-group">Women's Group</a>
+      </div>
+    </li>
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="church-online.html" class="mob-nav-link">Church Online</a>
+      </div>
+    </li>
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="whats-on.html" class="mob-nav-link">What's On</a>
+        <button class="mob-nav-toggle" aria-label="Expand What's On">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="whats-on.html#bible-reading">This Week's Bible Reading</a>
+        <a href="whats-on.html#food-bank">Food Bank</a>
+        <a href="whats-on.html#fellowship-lunch">Fellowship Lunch</a>
+        <a href="whats-on.html#mens-book-study">Men's Book Study</a>
+        <a href="whats-on.html#womens-book-study">Women's Book Study</a>
+        <a href="whats-on.html#announcements">Other Announcements</a>
+      </div>
+    </li>
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="next-steps.html" class="mob-nav-link">Next Steps</a>
+        <button class="mob-nav-toggle" aria-label="Expand Next Steps">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="next-steps.html#know-jesus">Get to Know Jesus</a>
+        <a href="next-steps.html#become-like">Become Like Jesus</a>
+        <a href="next-steps.html#live-like">Live Like Jesus</a>
+        <a href="next-steps.html#share-jesus">Share Jesus</a>
+      </div>
+    </li>
+
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="about.html" class="mob-nav-link">About</a>
+        <button class="mob-nav-toggle" aria-label="Expand About">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="about.html#beliefs">Bible Beliefs</a>
+        <a href="about.html#leadership">Leadership</a>
+      </div>
+    </li>
+
+  </ul>
+
+  <!-- CTA -->
+  <div class="mob-nav-cta">
+    <a href="pray.html">Let Us Pray For You</a>
+  </div>
+
+  <!-- Service info -->
+  <div class="mob-nav-info">
+    <p>Sundays 10:00 AM &middot; 208 Ballan Rd, Wyndham Vale VIC 3024</p>
+  </div>
+
 </div>
 
 <div class="page-hero">
