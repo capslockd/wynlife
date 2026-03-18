@@ -66,7 +66,6 @@ a:hover { color: var(--navy); text-decoration: underline; }
   z-index: 900;
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
-
 .nav-inner {
   max-width: var(--content-max);
   margin: 0 auto;
@@ -163,7 +162,7 @@ a:hover { color: var(--navy); text-decoration: underline; }
   text-decoration: none !important;
 }
 
-/* Hamburger — hidden on desktop */
+/* Hamburger — hidden on desktop, shown on mobile via breakpoint */
 .hamburger {
   display: none;
   flex-direction: column;
@@ -173,6 +172,9 @@ a:hover { color: var(--navy); text-decoration: underline; }
   background: none;
   border: none;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10000; /* always above mobile menu overlay */
+  -webkit-tap-highlight-color: transparent;
 }
 .hamburger span {
   display: block;
@@ -181,21 +183,37 @@ a:hover { color: var(--navy); text-decoration: underline; }
   background: white;
   border-radius: 2px;
   transition: 0.25s;
+  pointer-events: none; /* let clicks pass through to button */
 }
 
-/* ── MOBILE FULL-SCREEN MENU ── */
+/* ── MOBILE FULL-SCREEN MENU ──
+   Appended directly to <body> — position:fixed always works.
+   Uses display:none by default, display:flex when .open is added. */
 .mobile-nav {
-  display: none;          /* hidden by default */
+  display: none;
   position: fixed;
-  inset: 0;
-  z-index: 1000;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
   background: var(--navy);
-  padding: 80px 28px 40px;
+  padding: 72px 28px 40px;
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.mobile-nav.open { display: flex; }
+.mobile-nav.open {
+  display: flex;
+}
+
+/* Prevent body scroll when menu is open */
+body.menu-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
 
 .mobile-nav a {
   display: block;
@@ -231,22 +249,26 @@ a:hover { color: var(--navy); text-decoration: underline; }
 
 .mobile-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255,255,255,0.1);
+  top: 16px;
+  right: 16px;
+  background: rgba(255,255,255,0.12);
   border: none;
   color: white;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   line-height: 1;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10001;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.mobile-close:hover { background: rgba(255,255,255,0.2); }
+.mobile-close:hover,
+.mobile-close:active { background: rgba(255,255,255,0.25); }
 
 /* ══════════════════════════════════════════
    HERO — HOME (video)
@@ -1024,7 +1046,10 @@ textarea.field-input { resize: vertical; min-height: 130px; }
   /* Nav */
   .nav-inner { padding: 0 var(--side-pad); height: 66px; }
   .nav-menu  { display: none; }
-  .hamburger { display: flex; }
+  .hamburger {
+    display: flex;
+    touch-action: manipulation; /* removes 300ms tap delay on iOS */
+  }
 
   /* Two-col collapses */
   .two-col,
