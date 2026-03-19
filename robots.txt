@@ -1,0 +1,8 @@
+# WynLife Church — robots.txt
+# Allow all search engines to crawl the full site
+
+User-agent: *
+Allow: /
+
+# Point crawlers to the sitemap
+Sitemap: https://www.wynlife.com.au/sitemap.xml
