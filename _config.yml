@@ -14,9 +14,11 @@ exclude:
   - push-pr.sh
   - "*.zip"
 
-# Include dotfiles and other non-standard files if needed
+# Include these so Jekyll passes them through untouched
 include:
   - assets
+  - robots.txt
+  - sitemap.xml
 
 # Don't use any built-in Jekyll theme — we have our own CSS
 theme: null
