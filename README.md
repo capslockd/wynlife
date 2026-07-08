@@ -2,7 +2,7 @@
 
 Official website for **WynLife Church** — a vibrant, multicultural Christian community in Wyndham Vale, Melbourne's west.
 
-🌐 **Live site:** [https://yourusername.github.io/your-repo-name](https://yourusername.github.io/your-repo-name)
+🌐 **Live site:** [https://www.wynlife.com.au](https://www.wynlife.com.au)
 📍 **208 Ballan Rd, Wyndham Vale VIC 3024**
 📞 **+61 457 697 354**
 ✉️ **info@wynlife.com.au**
