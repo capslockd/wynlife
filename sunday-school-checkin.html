@@ -1,0 +1,69 @@
+---
+layout: none
+permalink: /sunday-school-checkin/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sunday School Check-In — WynLife Church</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/shared/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+
+<div class="adm-topbar">
+  <div class="adm-topbar-inner">
+    <a href="/" class="nav-logo" style="display:flex;align-items:center;">
+      <img src="/assets/shared/Wynlife_Header_Logo.avif" alt="WynLife Church" style="height:36px;"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="nav-logo-fallback" style="color:#fff;display:none;">WynLife</span>
+    </a>
+    <h1>Sunday School Check-In</h1>
+  </div>
+</div>
+
+<div class="kiosk">
+  <p class="kiosk-date">Parents &amp; Guardians</p>
+  <h1>Sign your children in &amp; out</h1>
+  <p class="adm-sub">Search for your family, tick <strong>In</strong> to sign a child
+    into Sunday School, and tick <strong>Out</strong> when you collect them.
+    The <strong>Out</strong> box only becomes available once a child has been signed in.</p>
+
+  <div class="adm-msg" id="kMsg"></div>
+
+  <form class="adm-form" id="kForm" style="max-width:100%;">
+    <div class="adm-field">
+      <label>Last name or family group</label>
+      <input type="search" id="kQuery" placeholder="e.g. Gorgonia" required autocomplete="off">
+    </div>
+    <div class="adm-actions">
+      <button class="adm-btn" type="submit" id="kSearch">Find My Children</button>
+    </div>
+  </form>
+
+  <div id="kResult" style="margin-top:28px;"></div>
+
+  <p class="adm-hint" style="margin-top:36px;">
+    Can't find your child? Please see one of the Sunday School team, or
+    <a href="mailto:info@wynlife.com.au">email us</a>.
+  </p>
+</div>
+
+<div class="footer-bottom" style="margin-top:0;">
+  <span>&copy; 2026 WynLife Church. All rights reserved.</span>
+  <span>208 Ballan Rd, Wyndham Vale VIC 3024 &middot;
+    <a href="mailto:info@wynlife.com.au" style="color:inherit">info@wynlife.com.au</a>
+  </span>
+</div>
+
+<script src="/admin-config.js"></script>
+<script src="/admin-api.js"></script>
+<script src="/sunday-school-checkin.js"></script>
+</body>
+</html>

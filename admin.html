@@ -1,0 +1,187 @@
+---
+layout: none
+permalink: /admin/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Church Admin — WynLife Church</title>
+  <!-- Internal tool: keep it out of search results -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/shared/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+<nav class="main-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <img src="/assets/shared/Wynlife_Header_Logo.avif" alt="WynLife Church"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="nav-logo-fallback">WynLife</span>
+    </a>
+    <ul class="nav-menu">
+      <li id="nav-gatherings">
+        <a href="/gatherings/">Gatherings</a>
+        <div class="nav-dropdown">
+          <a href="/gatherings/#wednesday-prayer">Wednesday Night Prayer</a>
+          <a href="/gatherings/#life-groups">Life Groups</a>
+          <a href="/gatherings/#youth">Youth Sunday</a>
+          <a href="/gatherings/#sunday-school">Sunday School</a>
+          <a href="/gatherings/#mens-group">Men's Group</a>
+          <a href="/gatherings/#womens-group">Women's Group</a>
+        </div>
+      </li>
+      <li id="nav-online"><a href="/church-online/">Church Online</a></li>
+      <li id="nav-whatson">
+        <a href="/whats-on/">What's On</a>
+        <div class="nav-dropdown">
+          <a href="/whats-on/#bible-reading">This Week's Bible Reading</a>
+          <a href="/whats-on/#food-bank">Food Bank</a>
+          <a href="/whats-on/#fellowship-lunch">Fellowship Lunch</a>
+          <a href="/whats-on/#mens-book-study">Men's Book Study</a>
+          <a href="/whats-on/#womens-book-study">Women's Book Study</a>
+          <a href="/whats-on/#announcements">Other Announcements</a>
+        </div>
+      </li>
+      <li id="nav-nextsteps">
+        <a href="/next-steps/">Next Steps</a>
+        <div class="nav-dropdown">
+          <a href="/next-steps/#know-jesus">Get to Know Jesus</a>
+          <a href="/next-steps/#become-like">Become Like Jesus</a>
+          <a href="/next-steps/#live-like">Live Like Jesus</a>
+          <a href="/next-steps/#share-jesus">Share Jesus</a>
+        </div>
+      </li>
+      <li id="nav-about">
+        <a href="/about/">About</a>
+        <div class="nav-dropdown">
+          <a href="/about/#beliefs">Bible Beliefs</a>
+          <a href="/about/#leadership">Leadership</a>
+          <a href="/admin/">Church Admin</a>
+        </div>
+      </li>
+      <li id="nav-pray">
+        <a href="/pray/" class="nav-cta-btn">Let Us Pray For You</a>
+      </li>
+    </ul>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
+      <div class="hamburger-bars">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="hamburger-label">Menu</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── MOBILE MENU ── -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mob-nav-header">
+    <a href="/" class="mob-nav-logo">
+      <img src="/assets/shared/Wynlife_Header_Logo.avif" alt="WynLife Church"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="mob-nav-logo-fallback">WynLife</span>
+    </a>
+    <button class="mob-nav-close" id="mobNavClose" aria-label="Close menu">&times;</button>
+  </div>
+  <ul class="mob-nav-list">
+    <li class="mob-nav-item">
+      <div class="mob-nav-row"><a href="/" class="mob-nav-link">Home</a></div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="/gatherings/" class="mob-nav-link">Gatherings</a>
+        <button class="mob-nav-toggle" aria-label="Expand Gatherings">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="/gatherings/#wednesday-prayer">Wednesday Night Prayer</a>
+        <a href="/gatherings/#life-groups">Life Groups</a>
+        <a href="/gatherings/#youth">Youth Sunday</a>
+        <a href="/gatherings/#sunday-school">Sunday School</a>
+        <a href="/gatherings/#mens-group">Men's Group</a>
+        <a href="/gatherings/#womens-group">Women's Group</a>
+      </div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row"><a href="/church-online/" class="mob-nav-link">Church Online</a></div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="/whats-on/" class="mob-nav-link">What's On</a>
+        <button class="mob-nav-toggle" aria-label="Expand What's On">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="/whats-on/#bible-reading">This Week's Bible Reading</a>
+        <a href="/whats-on/#food-bank">Food Bank</a>
+        <a href="/whats-on/#fellowship-lunch">Fellowship Lunch</a>
+        <a href="/whats-on/#mens-book-study">Men's Book Study</a>
+        <a href="/whats-on/#womens-book-study">Women's Book Study</a>
+        <a href="/whats-on/#announcements">Other Announcements</a>
+      </div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="/next-steps/" class="mob-nav-link">Next Steps</a>
+        <button class="mob-nav-toggle" aria-label="Expand Next Steps">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="/next-steps/#know-jesus">Get to Know Jesus</a>
+        <a href="/next-steps/#become-like">Become Like Jesus</a>
+        <a href="/next-steps/#live-like">Live Like Jesus</a>
+        <a href="/next-steps/#share-jesus">Share Jesus</a>
+      </div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row">
+        <a href="/about/" class="mob-nav-link">About</a>
+        <button class="mob-nav-toggle" aria-label="Expand About">&#8964;</button>
+      </div>
+      <div class="mob-nav-sub">
+        <a href="/about/#beliefs">Bible Beliefs</a>
+        <a href="/about/#leadership">Leadership</a>
+        <a href="/admin/">Church Admin</a>
+      </div>
+    </li>
+  </ul>
+  <div class="mob-nav-cta">
+    <a href="/pray/">Let Us Pray For You</a>
+  </div>
+</div>
+
+<!-- ── ADMIN TOPBAR ── -->
+<div class="adm-topbar">
+  <div class="adm-topbar-inner">
+    <h1>WynLife Church &mdash; Management App</h1>
+    <div class="adm-who" id="admWho"></div>
+  </div>
+</div>
+
+<!-- ── LOGIN (shown until signed in) ── -->
+<div class="adm-wrap" id="admLogin" hidden></div>
+
+<!-- ── ADMIN CONSOLE ── -->
+<div class="adm-wrap" id="admApp" hidden>
+  <div class="adm-layout">
+    <aside class="adm-menu" id="admMenu"></aside>
+    <main id="admView"></main>
+  </div>
+</div>
+
+<div class="footer-bottom no-print" style="margin-top:0;">
+  <span>&copy; 2026 WynLife Church. All rights reserved.</span>
+  <span>208 Ballan Rd, Wyndham Vale VIC 3024 &middot;
+    <a href="mailto:info@wynlife.com.au" style="color:inherit">info@wynlife.com.au</a>
+  </span>
+</div>
+
+<script src="/nav.js"></script>
+<script src="/admin-config.js"></script>
+<script src="/admin-api.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>

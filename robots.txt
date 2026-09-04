@@ -4,5 +4,9 @@
 User-agent: *
 Allow: /
 
+# Internal management app -- not for search engines
+Disallow: /admin/
+Disallow: /sunday-school-checkin/
+
 # Point crawlers to the sitemap
 Sitemap: https://www.wynlife.com.au/sitemap.xml
