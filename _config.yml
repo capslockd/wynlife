@@ -11,6 +11,7 @@ baseurl: ""
 # Exclude files Jekyll should not process or publish
 exclude:
   - README.md
+  - apps-script
   - push-pr.sh
   - "*.zip"
 

@@ -138,6 +138,30 @@ The page for online services:
 
 The website is hosted on a static server. Updates should be made to the appropriate HTML files directly. No special deployment steps are required beyond updating the files.
 
+## Church Management App (`/admin/`)
+
+A separate, login-protected console lives at `/admin/`, linked from the **About**
+dropdown as *Manage*. It is a static single-page app; all data lives in the
+Google Sheet **"Wynlife Management App Data Sheet"** and is reached through a
+Google Apps Script web app.
+
+| File | Purpose |
+|---|---|
+| `admin.html` | Console shell (`/admin/`) — nav, topbar, login card, menu + view slots |
+| `admin.js` | Views and routing for Manage / Reports / Tracking |
+| `admin-api.js` | Shared API client, session handling, date helpers |
+| `admin-config.js` | **The one file to edit** — holds the Apps Script `/exec` URL |
+| `admin.css` | Console and kiosk styling (uses `style.css` variables) |
+| `sunday-school-checkin.html` / `.js` | Parent-facing sign in / sign out kiosk (no login) |
+| `apps-script/Code.gs` | The backend: sheet setup, auth, all API actions |
+| `apps-script/README.md` | One-time setup, sheet layouts, roles, security notes |
+
+The `apps-script` folder is excluded from the Jekyll build, and both new pages
+are `noindex` and disallowed in `robots.txt`.
+
+Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
+(+ user management). Read `apps-script/README.md` before changing anything here.
+
 ## Common Issues and Solutions
 
 1. **Formatting Problems:** Maintain existing HTML structure when adding new content
