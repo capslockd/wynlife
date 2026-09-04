@@ -14,7 +14,7 @@
 window.WYNLIFE_ADMIN_CONFIG = {
   /* Google Apps Script web app URL, e.g.
      'https://script.google.com/macros/s/AKfycb..../exec' */
-  apiUrl: '',
+  apiUrl: 'https://script.google.com/macros/s/AKfycbx_UUXzA4OK960458EjQ40fM_PFNk-z64GUUFgbjRqKC7ZXAtVM6IENXg8_nKngW_Bc/exec',
 
   /* Shown on the "Setup Sunday School" screen as the link to hand to parents. */
   checkinPath: '/sunday-school-checkin/'
