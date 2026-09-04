@@ -161,8 +161,10 @@ are `noindex` and disallowed in `robots.txt`.
 
 Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
 (+ user management). Signing a child in at the kiosk issues the parent a
-4-digit **collection PIN** which they must give back to sign the child out;
-staff can see it on *Tracking > Setup Sunday School*. Read
+4-digit **collection PIN** which they must give back to sign the child out,
+and no child can be collected until 15 minutes after sign-in
+(`MIN_CARE_MINUTES`); staff can see the PIN on *Tracking > Setup Sunday
+School*. Read
 `apps-script/README.md` before changing anything here — a schema change there
 needs `setup()` re-run on the sheet.
 

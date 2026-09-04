@@ -30,7 +30,7 @@ var HEADERS = {
   members: [
     'Member ID', 'First Name', 'Last Name', 'Date of Birth', 'Special Dates',
     'Sunday Schooler', 'Grouped as Family', 'Family Group Name',
-    'Mobile', 'Email', 'Notes', 'Active', 'Created At', 'Updated At'
+    'Mobile', 'Email', 'Notes', 'Active', 'Created At', 'Updated At', 'Suburb'
   ],
   attendance: [
     'Record ID', 'Service Date', 'Member ID', 'First Name', 'Last Name',
@@ -59,6 +59,10 @@ var ROLES = ['basic', 'planner', 'admin'];
 var ROLE_RANK = { basic: 1, planner: 2, admin: 3 };
 
 var SESSION_HOURS = 12;
+
+/* A child cannot be signed out until this long after being signed in — it
+   stops an accidental double-tap from marking a child as collected. */
+var MIN_CARE_MINUTES = 15;
 
 /* Actions that parents may call without logging in (Sunday School kiosk). */
 var PUBLIC_ACTIONS = ['ping', 'ssRoster', 'ssSignIn', 'ssSignOut'];
@@ -543,6 +547,7 @@ function memberOut_(row) {
     familyGroupName: str_(row['Family Group Name']),
     mobile: str_(row['Mobile']),
     email: str_(row['Email']),
+    suburb: str_(row['Suburb']),
     notes: str_(row['Notes']),
     active: bool_(row['Active']),
     createdAt: str_(row['Created At']),
@@ -571,6 +576,7 @@ function memberPatch_(body) {
   if (body.familyGroupName !== undefined) patch['Family Group Name'] = str_(body.familyGroupName);
   if (body.mobile !== undefined)          patch['Mobile'] = str_(body.mobile);
   if (body.email !== undefined)           patch['Email'] = str_(body.email);
+  if (body.suburb !== undefined)          patch['Suburb'] = str_(body.suburb);
   if (body.notes !== undefined)           patch['Notes'] = str_(body.notes);
   if (body.active !== undefined)          patch['Active'] = bool_(body.active);
   return patch;
@@ -848,7 +854,9 @@ function ssRosterFor_(serviceDate) {
       signedInBy: str_(row['Signed In By']),
       signOutAt: str_(row['Sign Out At']),
       signedOutBy: str_(row['Signed Out By']),
-      pin: str_(row['PIN'])
+      pin: str_(row['PIN']),
+      canSignOutAt: collectableFrom_(str_(row['Sign In At'])),
+      tooSoon: str_(row['Status']) === 'Signed In' && tooSoonToCollect_(str_(row['Sign In At']))
     });
   });
   out.sort(function (a, b) {
@@ -876,9 +884,26 @@ function publicRoster_(roster) {
       signedInBy: kid.signedInBy,
       signOutAt: kid.signOutAt,
       signedOutBy: kid.signedOutBy,
-      hasPin: !!kid.pin
+      hasPin: !!kid.pin,
+      canSignOutAt: kid.canSignOutAt,
+      tooSoon: kid.tooSoon
     };
   });
+}
+
+/** MIN_CARE_MINUTES after a sign-in, as an ISO stamp ('' if never signed in). */
+function collectableFrom_(signInIso) {
+  if (!signInIso) return '';
+  var start = new Date(String(signInIso).replace(' ', 'T'));
+  if (isNaN(start.getTime())) return '';
+  return Utilities.formatDate(new Date(start.getTime() + MIN_CARE_MINUTES * 60000),
+                              tz_(), "yyyy-MM-dd'T'HH:mm:ss");
+}
+
+/** True while a child signed in less than MIN_CARE_MINUTES ago. */
+function tooSoonToCollect_(signInIso) {
+  var mins = minutesBetween_(signInIso, nowIso_());
+  return mins !== '' && mins < MIN_CARE_MINUTES;
 }
 
 /** PINs currently held by each family group with children still in care. */
@@ -978,7 +1003,7 @@ function apiSsSign_(body, direction) {
     var familyPins = liveFamilyPins_(serviceDate, rows);
     var batchPin = direction === 'in' ? newSsPin_(serviceDate) : '';
     var pinsIssued = [];
-    var done = [], skipped = [];
+    var done = [], skipped = [], pinFailed = [], tooSoon = [];
 
     ids.forEach(function (recordId) {
       var target = null;
@@ -1010,7 +1035,11 @@ function apiSsSign_(body, direction) {
         /* Rows signed in before PINs existed have none, and stay collectable. */
         var storedPin = str_(target['PIN']);
         if (storedPin && storedPin !== suppliedPin) {
-          skipped.push(name + ' (that PIN does not match)');
+          pinFailed.push(name);
+          return;
+        }
+        if (tooSoonToCollect_(str_(target['Sign In At']))) {
+          tooSoon.push(name + ' (from ' + clockTime_(collectableFrom_(str_(target['Sign In At']))) + ')');
           return;
         }
         updateRow_(SHEETS.sundaySchool, target._row, {
@@ -1025,13 +1054,17 @@ function apiSsSign_(body, direction) {
       serviceDate: serviceDate,
       done: done,
       skipped: skipped,
+      /* Kept apart from `skipped` so the kiosk can show them as real errors. */
+      pinFailed: pinFailed,
+      tooSoon: tooSoon,
+      minCareMinutes: MIN_CARE_MINUTES,
       /* Only the PINs just handed out go back, and only to whoever signed in. */
       pins: direction === 'in' ? pinsIssued : [],
       pin: pinsIssued.length === 1 ? pinsIssued[0] : '',
       roster: publicRoster_(ssRosterFor_(serviceDate)),
       message: done.length
         ? done.length + ' child(ren) signed ' + direction + ' at ' + clockTime_(stamp) + '.'
-        : 'Nothing changed.'
+        : (pinFailed.length ? 'That PIN does not match.' : 'Nothing changed.')
     };
   } finally {
     lock.releaseLock();

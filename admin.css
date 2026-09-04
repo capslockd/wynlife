@@ -387,9 +387,30 @@
   background: var(--white);
 }
 .kiosk-kid.done { background: var(--cream); }
-.kiosk-kid input[type=checkbox] { width: 24px; height: 24px; accent-color: var(--blue); flex-shrink: 0; }
-.kiosk-kid input[type=checkbox][disabled] { opacity: 0.35; }
 .kiosk-kid .who { flex: 1; min-width: 0; }
+
+/* The In / Out pair. Both boxes sit on one baseline, whatever their state. */
+.kiosk-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 52px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray);
+  cursor: pointer;
+}
+.kiosk-tick input[type=checkbox] {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+.kiosk-tick:has(input[disabled]) { cursor: default; opacity: 0.4; }
 .kiosk-kid .name {
   font-size: 1.05rem;
   font-weight: 700;

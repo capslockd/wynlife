@@ -475,8 +475,12 @@
           '<input type="text" id="mMobile" inputmode="tel" value="' +
           esc(member.mobile || '') + '">') +
       '</div>' +
-      field('Email <span class="adm-optional">(optional)</span>',
-        '<input type="email" id="mEmail" value="' + esc(member.email || '') + '">') +
+      '<div class="adm-grid-2">' +
+        field('Email <span class="adm-optional">(optional)</span>',
+          '<input type="email" id="mEmail" value="' + esc(member.email || '') + '">') +
+        field('Suburb <span class="adm-optional">(optional)</span>',
+          '<input type="text" id="mSuburb" value="' + esc(member.suburb || '') + '">') +
+      '</div>' +
       field('Special dates',
         '<textarea id="mSpecial" placeholder="Baptism: 2019-04-21; Wedding anniversary: 2012-06-10">' +
         esc(member.specialDates || '') + '</textarea>',
@@ -503,6 +507,7 @@
       dob: val('mDob'),
       mobile: val('mMobile'),
       email: val('mEmail'),
+      suburb: val('mSuburb'),
       specialDates: val('mSpecial'),
       familyGroupName: val('mFamily'),
       notes: val('mNotes'),
@@ -554,13 +559,13 @@
       '<div class="adm-msg" id="memberMsg"></div>' +
       '<div id="memberEditSlot"></div>' +
       '<div class="adm-toolbar">' +
-        field('Search', '<input type="search" id="memberSearch" placeholder="Name or family group" value="' +
+        field('Search', '<input type="search" id="memberSearch" placeholder="Name, family group or suburb" value="' +
           esc(query || '') + '">') +
         '<div class="adm-field">' +
           '<span class="adm-hint" id="memberCount" style="margin:0;"></span></div>' +
       '</div>' +
       '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
-        '<th>ID</th><th>Name</th><th>Family group</th><th>DOB</th>' +
+        '<th>ID</th><th>Name</th><th>Family group</th><th>Suburb</th><th>DOB</th>' +
         '<th>Sun. Schooler</th><th>Active</th><th></th>' +
       '</tr></thead><tbody id="memberRows"></tbody></table></div>');
 
@@ -570,6 +575,7 @@
         if (!q) return true;
         return (m.firstName + ' ' + m.lastName).toLowerCase().indexOf(q) !== -1 ||
                (m.familyGroupName || '').toLowerCase().indexOf(q) !== -1 ||
+               (m.suburb || '').toLowerCase().indexOf(q) !== -1 ||
                m.memberId.toLowerCase().indexOf(q) !== -1;
       });
       document.getElementById('memberCount').textContent =
@@ -580,6 +586,7 @@
               '<td>' + esc(m.memberId) + '</td>' +
               '<td><strong>' + esc(m.lastName) + '</strong>, ' + esc(m.firstName) + '</td>' +
               '<td>' + esc(m.familyGroupName || '—') + '</td>' +
+              '<td>' + esc(m.suburb || '—') + '</td>' +
               '<td>' + esc(m.dob || '—') + '</td>' +
               '<td>' + yesNo(m.sundaySchooler) + '</td>' +
               '<td>' + yesNo(m.active) + '</td>' +
@@ -587,7 +594,7 @@
                 esc(m.memberId) + '">Edit</button></td>' +
             '</tr>';
           }).join('')
-        : '<tr><td colspan="7">No members match that search.</td></tr>';
+        : '<tr><td colspan="8">No members match that search.</td></tr>';
 
       document.getElementById('memberRows').querySelectorAll('[data-edit-member]')
         .forEach(function (btn) {

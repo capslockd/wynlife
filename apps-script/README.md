@@ -102,8 +102,9 @@ does not need to change.
 | Grouped as Family | `TRUE` / `FALSE` |
 | Family Group Name | e.g. `Gorgonia Family` — parents search on this |
 | Mobile, Email, Notes | optional contact details |
-| Active | `FALSE` hides the person from attendance without deleting history |
+| Active | `FALSE` keeps the person on the attendance roll only while they belong to a family group; history is never deleted |
 | Created At / Updated At | set by the app |
+| Suburb | optional; also searchable on *Modify Member* |
 
 ### `Attendance Tracking Data` — one row per member per service
 
@@ -141,9 +142,15 @@ children in care keeps the PIN it was given. It is visible to staff on
 **Tracking > Setup Sunday School** for when a parent forgets theirs, and is
 never sent to the parent-facing kiosk except at the moment it is issued.
 
-If you are upgrading an existing sheet, re-run `setup()` to add the `PIN`
-column — rows signed in before it existed have no PIN and can still be signed
-out without one.
+A child cannot be signed out until **15 minutes** after being signed in
+(`MIN_CARE_MINUTES` in `Code.gs`), which stops an accidental double-tap from
+marking a child as collected on arrival. The kiosk greys the **Out** box out
+until then, shows the time they can be collected, and unlocks itself when that
+time arrives.
+
+If you are upgrading an existing sheet, re-run `setup()` to add the `PIN` and
+`Suburb` columns — rows signed in before the PIN existed have none and can
+still be signed out without one.
 
 ### `App Users` — admin console logins
 
@@ -179,8 +186,9 @@ The script refuses to demote or disable the last active admin.
 3. Share the **parent check-in link** (`/sunday-school-checkin/`) — on a foyer
    tablet, or by text/QR code. Parents type their last name or family group,
    tick **In**, and tick **Out** at pick-up. **Out** stays greyed out until the
-   child is signed in. Signing in shows the parent a **4-digit collection PIN**
-   which they must type back in to sign out.
+   child is signed in, and for 15 minutes after that. Signing in shows the
+   parent a **4-digit collection PIN** which they must type back in to sign
+   out; a wrong PIN is refused in red and nothing is recorded.
 4. **Reports > Attendance Report** / **Sunday School Report** — set the range
    (or press **This Week**), then **Export CSV** or **Print**.
 

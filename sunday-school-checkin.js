@@ -15,6 +15,8 @@
   var serviceDate = '';
   /* PINs handed out on this device, shown until the children are collected. */
   var issuedPins = [];
+  /* Unlocks the Out boxes on their own once the wait is up. */
+  var unlockTimer = null;
 
   function msg(text, kind) {
     elMsg.className = 'adm-msg ' + (kind || 'info');
@@ -71,7 +73,10 @@
     }
     if (kid.status === 'Signed In') {
       return 'Signed in at ' + (A.prettyTime(kid.signInAt) || 'earlier') +
-             (kid.signedInBy ? ' by ' + kid.signedInBy : '');
+             (kid.signedInBy ? ' by ' + kid.signedInBy : '') +
+             (kid.tooSoon && kid.canSignOutAt
+               ? ' · can be collected from ' + A.prettyTime(kid.canSignOutAt)
+               : '');
     }
     return 'Not signed in yet';
   }
@@ -85,27 +90,15 @@
       '<div id="kKids">' +
         roster.map(function (kid) {
           var canIn  = kid.status === 'Expected';
-          var canOut = kid.status === 'Signed In';
+          var canOut = kid.status === 'Signed In' && !kid.tooSoon;
           return '<div class="kiosk-kid' + (canIn ? '' : ' done') + '">' +
             '<div class="who">' +
               '<div class="name">' + esc(kid.firstName + ' ' + kid.lastName) + '</div>' +
               '<div class="meta">' + esc(kid.familyGroupName || kid.lastName) + ' &middot; ' +
                 esc(statusLine(kid)) + '</div>' +
             '</div>' +
-            '<label class="adm-check" style="flex-direction:column;gap:4px;font-size:0.7rem;' +
-              'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);">' +
-              '<input type="checkbox" data-in="' + esc(kid.recordId) + '"' +
-                (canIn ? '' : ' disabled') +
-                ' aria-label="Sign in ' + esc(kid.firstName) + '">' +
-              '<span>In</span>' +
-            '</label>' +
-            '<label class="adm-check" style="flex-direction:column;gap:4px;font-size:0.7rem;' +
-              'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);">' +
-              '<input type="checkbox" data-out="' + esc(kid.recordId) + '"' +
-                (canOut ? '' : ' disabled') +
-                ' aria-label="Sign out ' + esc(kid.firstName) + '">' +
-              '<span>Out</span>' +
-            '</label>' +
+            tickBox('in', kid.recordId, 'In', canIn, 'Sign in ' + kid.firstName) +
+            tickBox('out', kid.recordId, 'Out', canOut, 'Sign out ' + kid.firstName) +
           '</div>';
         }).join('') +
       '</div>' +
@@ -137,6 +130,35 @@
     });
 
     document.getElementById('kConfirm').addEventListener('click', confirmTicks);
+    scheduleUnlock(roster);
+  }
+
+  /**
+   * Re-draws the list the moment the earliest held child becomes collectable,
+   * so a parent waiting at the door is not left tapping a disabled box.
+   */
+  function scheduleUnlock(roster) {
+    if (unlockTimer) { clearTimeout(unlockTimer); unlockTimer = null; }
+    var soonest = 0;
+    roster.forEach(function (kid) {
+      if (!kid.tooSoon || !kid.canSignOutAt) return;
+      var at = new Date(String(kid.canSignOutAt).replace(' ', 'T')).getTime();
+      if (isNaN(at)) return;
+      if (!soonest || at < soonest) soonest = at;
+    });
+    if (!soonest) return;
+    var wait = soonest - Date.now();
+    /* Beyond an hour the clocks disagree about something; leave it alone. */
+    if (wait < 0 || wait > 3600000) return;
+    unlockTimer = setTimeout(function () { refresh(); }, wait + 2000);
+  }
+
+  function tickBox(direction, recordId, label, enabled, aria) {
+    return '<label class="kiosk-tick">' +
+      '<input type="checkbox" data-' + direction + '="' + esc(recordId) + '"' +
+        (enabled ? '' : ' disabled') + ' aria-label="' + esc(aria) + '">' +
+      '<span>' + esc(label) + '</span>' +
+    '</label>';
   }
 
   function pinBanner() {
@@ -190,13 +212,13 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    var notes = [];
+    var notes = [], problems = [];
 
     /* Sign-ins go first so a child ticked for both is handled in order. */
     var chain = signIns.length
       ? A.call('ssSignIn', { serviceDate: serviceDate, recordIds: signIns, by: by })
           .then(function (data) {
-            collect(notes, data);
+            collect(notes, problems, data);
             if (data.pins && data.pins.length) issuedPins = data.pins;
             return data;
           })
@@ -208,7 +230,7 @@
         return A.call('ssSignOut', {
           serviceDate: serviceDate, recordIds: signOuts, by: by, pin: pin
         }).then(function (data) {
-          collect(notes, data);
+          collect(notes, problems, data);
           /* Once children are collected the PIN they were signed in on is spent. */
           if (data.done && data.done.length && !signIns.length) issuedPins = [];
           return data;
@@ -218,7 +240,7 @@
         /* Re-run the parent's own search so the refreshed list stays limited
            to their family — the sign-in response carries the whole roster. */
         return refresh().then(function () {
-          msgHtml(notes.map(function (note) { return esc(note); }).join('<br>'), 'ok');
+          report(notes, problems);
         });
       })
       .catch(function (err) {
@@ -239,12 +261,31 @@
       });
   }
 
-  function collect(notes, data) {
+  function collect(notes, problems, data) {
     if (data.done && data.done.length) {
       notes.push(data.message + ' (' + data.done.join(', ') + ')');
     }
+    if (data.pinFailed && data.pinFailed.length) {
+      problems.push('<strong>Incorrect PIN.</strong> ' + data.pinFailed.map(esc).join(', ') +
+        ' ' + (data.pinFailed.length === 1 ? 'was' : 'were') + ' not signed out. Please check ' +
+        'the 4-digit PIN you were given at sign in, or see one of the Sunday School team.');
+    }
+    if (data.tooSoon && data.tooSoon.length) {
+      problems.push('<strong>Too soon to collect.</strong> ' + data.tooSoon.map(esc).join(', ') +
+        '. Children can be signed out ' + (data.minCareMinutes || 15) +
+        ' minutes after they are signed in.');
+    }
     if (data.skipped && data.skipped.length) {
       notes.push('Skipped: ' + data.skipped.join(', '));
+    }
+  }
+
+  /** Anything that failed wins the message area, and shows in red. */
+  function report(notes, problems) {
+    if (problems.length) {
+      msgHtml(problems.concat(notes.map(esc)).join('<br>'), 'error');
+    } else {
+      msgHtml(notes.map(esc).join('<br>'), 'ok');
     }
   }
 
