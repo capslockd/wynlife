@@ -144,8 +144,10 @@ permalink: /admin/
       <div class="mob-nav-sub">
         <a href="/about/#beliefs">Bible Beliefs</a>
         <a href="/about/#leadership">Leadership</a>
-        <a href="/admin/">Manage</a>
       </div>
+    </li>
+    <li class="mob-nav-item">
+      <div class="mob-nav-row"><a href="/admin/" class="mob-nav-link">Manage</a></div>
     </li>
   </ul>
   <div class="mob-nav-cta">
@@ -167,6 +169,10 @@ permalink: /admin/
 <!-- ── ADMIN CONSOLE ── -->
 <div class="adm-wrap" id="admApp" hidden>
   <div class="adm-layout">
+    <button class="adm-menu-toggle" id="admMenuToggle" type="button" aria-expanded="false" aria-controls="admMenu">
+      <span>Menu &middot; <span class="adm-menu-toggle-current" id="admMenuCurrent">Dashboard</span></span>
+      <span class="adm-menu-toggle-caret" aria-hidden="true">&#8964;</span>
+    </button>
     <aside class="adm-menu" id="admMenu"></aside>
     <main id="admView"></main>
   </div>

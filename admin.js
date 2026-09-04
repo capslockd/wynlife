@@ -13,6 +13,8 @@
   var elMenu  = document.getElementById('admMenu');
   var elView  = document.getElementById('admView');
   var elWho   = document.getElementById('admWho');
+  var elMenuToggle  = document.getElementById('admMenuToggle');
+  var elMenuCurrent = document.getElementById('admMenuCurrent');
 
   /* ── Menu definition ─────────────────────────────────────────────────── */
 
@@ -53,6 +55,15 @@
   /* ── Boot ────────────────────────────────────────────────────────────── */
 
   function start() {
+    if (elMenuToggle) {
+      elMenuToggle.addEventListener('click', function () {
+        setMenuOpen(!elMenu.classList.contains('is-open'));
+      });
+      /* Any menu tap navigates, so close the drawer behind it. */
+      elMenu.addEventListener('click', function (e) {
+        if (e.target.closest('a')) setMenuOpen(false);
+      });
+    }
     if (A.getUser() && A.getToken()) {
       showApp();
     } else {
@@ -62,6 +73,7 @@
   }
 
   function showLogin(message) {
+    setMenuOpen(false);
     elApp.hidden = true;
     elLogin.hidden = false;
     elWho.innerHTML = '';
@@ -120,8 +132,26 @@
     route();
   }
 
+  function setMenuOpen(open) {
+    if (!elMenuToggle) return;
+    elMenu.classList.toggle('is-open', open);
+    elMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  /** The menu label for a route, used by the mobile toggle button. */
+  function routeLabel(route) {
+    var label = 'Dashboard';
+    MENU.forEach(function (group) {
+      group.items.forEach(function (item) {
+        if (item.route === route) label = item.label;
+      });
+    });
+    return label;
+  }
+
   function renderMenu() {
     var current = currentRoute();
+    if (elMenuCurrent) elMenuCurrent.textContent = routeLabel(current);
     elMenu.innerHTML = MENU.map(function (group) {
       var links = group.items.map(function (item) {
         var allowed = A.hasRole(item.role);
@@ -143,6 +173,7 @@
 
   function route() {
     if (!A.getUser()) { showLogin(); return; }
+    setMenuOpen(false);
     var name = currentRoute();
     var view = VIEWS[name];
     renderMenu();
@@ -440,9 +471,12 @@
       '</div>' +
       '<div class="adm-grid-2">' +
         field('Date of birth', '<input type="date" id="mDob" value="' + esc(member.dob || '') + '">') +
-        field('Mobile', '<input type="text" id="mMobile" value="' + esc(member.mobile || '') + '">') +
+        field('Mobile <span class="adm-optional">(optional)</span>',
+          '<input type="text" id="mMobile" inputmode="tel" value="' +
+          esc(member.mobile || '') + '">') +
       '</div>' +
-      field('Email', '<input type="email" id="mEmail" value="' + esc(member.email || '') + '">') +
+      field('Email <span class="adm-optional">(optional)</span>',
+        '<input type="email" id="mEmail" value="' + esc(member.email || '') + '">') +
       field('Special dates',
         '<textarea id="mSpecial" placeholder="Baptism: 2019-04-21; Wedding anniversary: 2012-06-10">' +
         esc(member.specialDates || '') + '</textarea>',
@@ -522,7 +556,7 @@
       '<div class="adm-toolbar">' +
         field('Search', '<input type="search" id="memberSearch" placeholder="Name or family group" value="' +
           esc(query || '') + '">') +
-        '<div class="adm-field"><label>&nbsp;</label>' +
+        '<div class="adm-field">' +
           '<span class="adm-hint" id="memberCount" style="margin:0;"></span></div>' +
       '</div>' +
       '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
@@ -610,14 +644,16 @@
     var sunday = A.lastSunday();
     elView.innerHTML = panel('Sunday Attendance',
       'Pick the service date, search for a person or family group, then tick ' +
-      'everyone who was present. Saving writes to the ' +
+      'everyone who was present. Whole family groups are listed, including ' +
+      'anyone marked inactive, so nobody is missing when you work through a ' +
+      'family. Saving writes to the ' +
       '<strong>Attendance Tracking Data</strong> sheet — you can come back and ' +
       'edit the same Sunday as often as you like.',
       '<div class="adm-msg" id="attMsg"></div>' +
       '<div class="adm-toolbar">' +
         field('Service date', '<input type="date" id="attDate" value="' + esc(sunday) + '">') +
         field('Search', '<input type="search" id="attSearch" placeholder="Name or family group">') +
-        '<div class="adm-field"><label>&nbsp;</label>' +
+        '<div class="adm-field">' +
           '<button class="adm-btn secondary" id="attLoad">Load</button></div>' +
       '</div>' +
       '<div id="attBody"></div>');
@@ -657,7 +693,7 @@
         '<div class="adm-stat"><div class="v" id="attKidCount">0</div>' +
           '<div class="k">Sunday Schoolers present</div></div>' +
         '<div class="adm-stat"><div class="v">' + rows.length + '</div>' +
-          '<div class="k">Active members</div></div>' +
+          '<div class="k">On the roll</div></div>' +
       '</div>' +
       '<p class="adm-sub"><strong>' + esc(A.prettyDate(date)) + '</strong></p>' +
       '<div class="adm-actions" style="margin-bottom:16px;">' +
@@ -705,7 +741,8 @@
           '<td><input type="checkbox" data-att="' + esc(row.memberId) + '"' +
             (state[row.memberId] ? ' checked' : '') +
             ' aria-label="' + esc(row.firstName + ' ' + row.lastName) + ' present"></td>' +
-          '<td><strong>' + esc(row.lastName) + '</strong>, ' + esc(row.firstName) + '</td>' +
+          '<td><strong>' + esc(row.lastName) + '</strong>, ' + esc(row.firstName) +
+            (row.active === false ? ' <span class="adm-pill grey">Inactive</span>' : '') + '</td>' +
           '<td>' + esc(row.familyGroupName || '—') + '</td>' +
           '<td>' + yesNo(row.sundaySchooler) + '</td>' +
           '<td>' + (row.recorded
@@ -769,13 +806,15 @@
       '<strong>present</strong> on the chosen Sunday who is flagged as a ' +
       '<strong>Sunday Schooler</strong>. Parents then sign their children in and ' +
       'out from the link below, and every action is timestamped on the ' +
-      '<strong>Sunday School Data</strong> sheet.',
+      '<strong>Sunday School Data</strong> sheet. Signing in issues the parent a ' +
+      '4-digit PIN which they must give back to sign the child out — the ' +
+      '<strong>PIN</strong> column below is there for when a parent forgets theirs.',
       '<div class="adm-msg" id="ssMsg"></div>' +
       '<div class="adm-toolbar">' +
         field('Service date', '<input type="date" id="ssDate" value="' + esc(sunday) + '">') +
-        '<div class="adm-field"><label>&nbsp;</label>' +
+        '<div class="adm-field">' +
           '<button class="adm-btn" id="ssSetup">Set Up Roster</button></div>' +
-        '<div class="adm-field"><label>&nbsp;</label>' +
+        '<div class="adm-field">' +
           '<button class="adm-btn secondary" id="ssRefresh">Refresh</button></div>' +
       '</div>' +
       '<div class="adm-panel" style="background:var(--cream);margin-bottom:22px;padding:18px 20px;">' +
@@ -860,7 +899,7 @@
           '<div class="k">Signed out</div></div>' +
       '</div>' +
       '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
-        '<th>Child</th><th>Family group</th><th>Status</th>' +
+        '<th>Child</th><th>Family group</th><th>Status</th><th>PIN</th>' +
         '<th>Signed in</th><th>By</th><th>Signed out</th><th>By</th>' +
       '</tr></thead><tbody>' +
       (roster.length ? roster.map(function (kid) {
@@ -868,13 +907,14 @@
           '<td><strong>' + esc(kid.lastName) + '</strong>, ' + esc(kid.firstName) + '</td>' +
           '<td>' + esc(kid.familyGroupName || '—') + '</td>' +
           '<td>' + ssStatusPill(kid.status) + '</td>' +
+          '<td>' + (kid.pin ? '<code>' + esc(kid.pin) + '</code>' : '—') + '</td>' +
           '<td>' + esc(A.prettyTime(kid.signInAt) || '—') + '</td>' +
           '<td>' + esc(kid.signedInBy || '—') + '</td>' +
           '<td>' + esc(A.prettyTime(kid.signOutAt) || '—') + '</td>' +
           '<td>' + esc(kid.signedOutBy || '—') + '</td>' +
         '</tr>';
       }).join('')
-        : '<tr><td colspan="7">No roster for this date yet. Record Sunday attendance ' +
+        : '<tr><td colspan="8">No roster for this date yet. Record Sunday attendance ' +
           'first, then press <strong>Set Up Roster</strong>.</td></tr>') +
       '</tbody></table></div>';
   }
@@ -892,13 +932,13 @@
     return '<div class="adm-toolbar no-print">' +
       field('From', '<input type="date" id="' + prefix + 'From" value="' + esc(range.from) + '">') +
       field('To', '<input type="date" id="' + prefix + 'To" value="' + esc(range.to) + '">') +
-      '<div class="adm-field"><label>&nbsp;</label>' +
+      '<div class="adm-field">' +
         '<button class="adm-btn" id="' + prefix + 'Run">Generate</button></div>' +
-      '<div class="adm-field"><label>&nbsp;</label>' +
+      '<div class="adm-field">' +
         '<button class="adm-btn secondary" id="' + prefix + 'Week">This Week</button></div>' +
-      '<div class="adm-field"><label>&nbsp;</label>' +
+      '<div class="adm-field">' +
         '<button class="adm-btn secondary" id="' + prefix + 'Csv">Export CSV</button></div>' +
-      '<div class="adm-field"><label>&nbsp;</label>' +
+      '<div class="adm-field">' +
         '<button class="adm-btn secondary" id="' + prefix + 'Print">Print</button></div>' +
     '</div>';
   }

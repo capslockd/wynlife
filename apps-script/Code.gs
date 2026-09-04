@@ -39,7 +39,7 @@ var HEADERS = {
   sundaySchool: [
     'Record ID', 'Service Date', 'Member ID', 'First Name', 'Last Name',
     'Family Group Name', 'Status', 'Sign In At', 'Signed In By',
-    'Sign Out At', 'Signed Out By', 'Setup By', 'Setup At'
+    'Sign Out At', 'Signed Out By', 'Setup By', 'Setup At', 'PIN'
   ],
   users: [
     'User ID', 'Email', 'Display Name', 'Role', 'Salt', 'Password Hash',
@@ -615,8 +615,13 @@ function findMemberRow_(memberId) {
 /* ─────────────────────── Tracking: Sunday attendance ─────────────────────── */
 
 /**
- * Returns every active member plus whatever has already been recorded for the
- * given service date, so the attendance screen can render tick boxes.
+ * Returns the roll for a service date, plus whatever has already been recorded
+ * for it, so the attendance screen can render tick boxes.
+ *
+ * Everyone active is on the roll, and so is anyone inactive who belongs to a
+ * family group — families show up whole, so a parent ticking off their group
+ * never finds a relative missing. Inactive people carry a flag so the screen
+ * can mark them.
  */
 function apiGetAttendance_(session, body) {
   var serviceDate = dateKey_(body.serviceDate);
@@ -633,7 +638,9 @@ function apiGetAttendance_(session, body) {
     }
   });
 
-  var members = readRows_(SHEETS.members).map(memberOut_).filter(function (m) { return m.active; });
+  var members = readRows_(SHEETS.members).map(memberOut_).filter(function (m) {
+    return m.active || !!m.familyGroupName;
+  });
   members.sort(function (a, b) {
     var ga = (a.familyGroupName || 'zzzz').toLowerCase();
     var gb = (b.familyGroupName || 'zzzz').toLowerCase();
@@ -649,6 +656,7 @@ function apiGetAttendance_(session, body) {
       lastName: m.lastName,
       familyGroupName: m.familyGroupName,
       sundaySchooler: m.sundaySchooler,
+      active: m.active,
       present: rec ? rec.present : false,
       recorded: !!rec,
       recordedBy: rec ? rec.recordedBy : '',
@@ -839,7 +847,8 @@ function ssRosterFor_(serviceDate) {
       signInAt: str_(row['Sign In At']),
       signedInBy: str_(row['Signed In By']),
       signOutAt: str_(row['Sign Out At']),
-      signedOutBy: str_(row['Signed Out By'])
+      signedOutBy: str_(row['Signed Out By']),
+      pin: str_(row['PIN'])
     });
   });
   out.sort(function (a, b) {
@@ -849,6 +858,60 @@ function ssRosterFor_(serviceDate) {
 }
 
 /* ─────────────────── Public: parent sign in / sign out kiosk ─────────────────── */
+
+/**
+ * The kiosk needs no login, so a roster sent to a parent must never carry the
+ * PINs — that would hand them the key to every other family's children.
+ */
+function publicRoster_(roster) {
+  return roster.map(function (kid) {
+    return {
+      recordId: kid.recordId,
+      memberId: kid.memberId,
+      firstName: kid.firstName,
+      lastName: kid.lastName,
+      familyGroupName: kid.familyGroupName,
+      status: kid.status,
+      signInAt: kid.signInAt,
+      signedInBy: kid.signedInBy,
+      signOutAt: kid.signOutAt,
+      signedOutBy: kid.signedOutBy,
+      hasPin: !!kid.pin
+    };
+  });
+}
+
+/** PINs currently held by each family group with children still in care. */
+function liveFamilyPins_(serviceDate, rows) {
+  var pins = {};
+  rows.forEach(function (row) {
+    if (dateKey_(row['Service Date']) !== serviceDate) return;
+    if (str_(row['Status']) !== 'Signed In') return;
+    var family = str_(row['Family Group Name']);
+    var pin = str_(row['PIN']);
+    if (family && pin) pins[family] = pin;
+  });
+  return pins;
+}
+
+/**
+ * A fresh 4-digit PIN for one sign-in, avoiding any PIN already held by a
+ * child still in care on the same day so two families can never collide.
+ * 1000-9999 only, so a leading zero can't be lost by the spreadsheet.
+ */
+function newSsPin_(serviceDate) {
+  var taken = {};
+  readRows_(SHEETS.sundaySchool).forEach(function (row) {
+    if (dateKey_(row['Service Date']) !== serviceDate) return;
+    if (str_(row['Status']) !== 'Signed In') return;
+    taken[str_(row['PIN'])] = true;
+  });
+  for (var attempt = 0; attempt < 200; attempt++) {
+    var pin = String(Math.floor(Math.random() * 9000) + 1000);
+    if (!taken[pin]) return pin;
+  }
+  throw new Error('Could not allocate a check-in PIN. Please see the Sunday School team.');
+}
 
 /** The most recent date that has a Sunday School roster set up. */
 function latestSsDate_() {
@@ -875,10 +938,10 @@ function apiSsRoster_(body) {
     return { ok: false, error: 'Please type at least 2 letters of your last name or family group.' };
   }
 
-  var roster = ssRosterFor_(serviceDate).filter(function (kid) {
+  var roster = publicRoster_(ssRosterFor_(serviceDate).filter(function (kid) {
     return kid.lastName.toLowerCase().indexOf(query) !== -1 ||
            kid.familyGroupName.toLowerCase().indexOf(query) !== -1;
-  });
+  }));
 
   return {
     ok: true,
@@ -888,19 +951,33 @@ function apiSsRoster_(body) {
   };
 }
 
+/**
+ * Signing in mints one 4-digit PIN for the whole batch and stores it against
+ * each child; signing out demands that PIN back, so only the adult who dropped
+ * a child off can collect them.
+ */
 function apiSsSign_(body, direction) {
   var serviceDate = dateKey_(body.serviceDate) || latestSsDate_();
   var ids = body.recordIds || [];
   var by = str_(body.by);
+  var suppliedPin = str_(body.pin).replace(/[^0-9]/g, '');
   if (!serviceDate) throw new Error('Sunday School has not been set up yet.');
   if (!ids.length) throw new Error('Please tick at least one child.');
   if (!by) throw new Error('Please enter your name so we know who signed the children ' + direction + '.');
+  if (direction === 'out' && suppliedPin.length !== 4) {
+    throw new Error('Please enter the 4-digit PIN you were given when you signed in.');
+  }
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     var rows = readRows_(SHEETS.sundaySchool);
     var stamp = nowIso_();
+    /* A family that already has children in care keeps the PIN it was given,
+       so a late arrival never leaves a parent holding two of them. */
+    var familyPins = liveFamilyPins_(serviceDate, rows);
+    var batchPin = direction === 'in' ? newSsPin_(serviceDate) : '';
+    var pinsIssued = [];
     var done = [], skipped = [];
 
     ids.forEach(function (recordId) {
@@ -918,16 +995,26 @@ function apiSsSign_(body, direction) {
           skipped.push(name + ' (already signed in)');
           return;
         }
+        var family = str_(target['Family Group Name']);
+        var usePin = (family && familyPins[family]) || batchPin;
+        if (family) familyPins[family] = usePin;
+        if (pinsIssued.indexOf(usePin) === -1) pinsIssued.push(usePin);
         updateRow_(SHEETS.sundaySchool, target._row, {
-          'Status': 'Signed In', 'Sign In At': stamp, 'Signed In By': by
+          'Status': 'Signed In', 'Sign In At': stamp, 'Signed In By': by, 'PIN': usePin
         });
       } else {
         if (status !== 'Signed In') {
           skipped.push(name + (status === 'Signed Out' ? ' (already signed out)' : ' (not signed in yet)'));
           return;
         }
+        /* Rows signed in before PINs existed have none, and stay collectable. */
+        var storedPin = str_(target['PIN']);
+        if (storedPin && storedPin !== suppliedPin) {
+          skipped.push(name + ' (that PIN does not match)');
+          return;
+        }
         updateRow_(SHEETS.sundaySchool, target._row, {
-          'Status': 'Signed Out', 'Sign Out At': stamp, 'Signed Out By': by
+          'Status': 'Signed Out', 'Sign Out At': stamp, 'Signed Out By': by, 'PIN': ''
         });
       }
       done.push(name);
@@ -938,7 +1025,10 @@ function apiSsSign_(body, direction) {
       serviceDate: serviceDate,
       done: done,
       skipped: skipped,
-      roster: ssRosterFor_(serviceDate),
+      /* Only the PINs just handed out go back, and only to whoever signed in. */
+      pins: direction === 'in' ? pinsIssued : [],
+      pin: pinsIssued.length === 1 ? pinsIssued[0] : '',
+      roster: publicRoster_(ssRosterFor_(serviceDate)),
       message: done.length
         ? done.length + ' child(ren) signed ' + direction + ' at ' + clockTime_(stamp) + '.'
         : 'Nothing changed.'

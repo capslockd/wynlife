@@ -13,6 +13,8 @@
   var elForm   = document.getElementById('kForm');
 
   var serviceDate = '';
+  /* PINs handed out on this device, shown until the children are collected. */
+  var issuedPins = [];
 
   function msg(text, kind) {
     elMsg.className = 'adm-msg ' + (kind || 'info');
@@ -47,6 +49,7 @@
     msg('');
 
     A.call('ssRoster', { query: query }).then(function (data) {
+      issuedPins = [];
       serviceDate = data.serviceDate;
       if (!data.roster.length) {
         msg(data.message || 'No children found. Please check with the Sunday School team.', 'info');
@@ -74,8 +77,11 @@
   }
 
   function render(roster) {
+    var anySignedIn = roster.some(function (kid) { return kid.status === 'Signed In'; });
+
     elResult.innerHTML =
       '<p class="kiosk-date">Sunday School &mdash; ' + esc(A.prettyDate(serviceDate)) + '</p>' +
+      pinBanner() +
       '<div id="kKids">' +
         roster.map(function (kid) {
           var canIn  = kid.status === 'Expected';
@@ -109,6 +115,15 @@
           'value="' + esc(rememberedName()) + '" autocomplete="name">' +
         '<div class="adm-hint">Recorded against every sign in and sign out.</div>' +
       '</div>' +
+      (anySignedIn
+        ? '<div class="adm-field" style="margin-top:16px;">' +
+            '<label>Collection PIN</label>' +
+            '<input type="text" id="kPin" inputmode="numeric" pattern="[0-9]*" ' +
+              'maxlength="4" placeholder="0000" autocomplete="off">' +
+            '<div class="adm-hint">The 4-digit PIN you were given when you signed ' +
+              'your children in. Only needed to sign them out.</div>' +
+          '</div>'
+        : '') +
       '<div class="adm-actions" style="margin-top:16px;">' +
         '<button class="adm-btn" id="kConfirm">Confirm</button>' +
         '<button class="adm-btn secondary" id="kAgain">Start Over</button>' +
@@ -122,6 +137,16 @@
     });
 
     document.getElementById('kConfirm').addEventListener('click', confirmTicks);
+  }
+
+  function pinBanner() {
+    if (!issuedPins.length) return '';
+    return '<div class="kiosk-pin">' +
+      '<div class="kiosk-pin-label">Your collection PIN</div>' +
+      '<div class="kiosk-pin-code">' + issuedPins.map(esc).join(' &middot; ') + '</div>' +
+      '<div class="kiosk-pin-note">Keep this safe — you will be asked for it when ' +
+        'you collect your ' + (issuedPins.length > 1 ? 'children' : 'child') + '.</div>' +
+    '</div>';
   }
 
   function rememberedName() {
@@ -140,6 +165,8 @@
 
   function confirmTicks() {
     var by = document.getElementById('kBy').value.trim();
+    var pinEl = document.getElementById('kPin');
+    var pin = pinEl ? pinEl.value.replace(/[^0-9]/g, '') : '';
     var signIns = ticked('in');
     var signOuts = ticked('out');
 
@@ -150,6 +177,11 @@
     if (!by) {
       msg('Please enter your name first.', 'error');
       document.getElementById('kBy').focus();
+      return;
+    }
+    if (signOuts.length && pin.length !== 4) {
+      msg('Please enter the 4-digit PIN you were given when you signed in.', 'error');
+      if (pinEl) pinEl.focus();
       return;
     }
     rememberName(by);
@@ -163,14 +195,24 @@
     /* Sign-ins go first so a child ticked for both is handled in order. */
     var chain = signIns.length
       ? A.call('ssSignIn', { serviceDate: serviceDate, recordIds: signIns, by: by })
-          .then(function (data) { collect(notes, data); return data; })
+          .then(function (data) {
+            collect(notes, data);
+            if (data.pins && data.pins.length) issuedPins = data.pins;
+            return data;
+          })
       : Promise.resolve(null);
 
     chain
       .then(function () {
         if (!signOuts.length) return null;
-        return A.call('ssSignOut', { serviceDate: serviceDate, recordIds: signOuts, by: by })
-          .then(function (data) { collect(notes, data); return data; });
+        return A.call('ssSignOut', {
+          serviceDate: serviceDate, recordIds: signOuts, by: by, pin: pin
+        }).then(function (data) {
+          collect(notes, data);
+          /* Once children are collected the PIN they were signed in on is spent. */
+          if (data.done && data.done.length && !signIns.length) issuedPins = [];
+          return data;
+        });
       })
       .then(function () {
         /* Re-run the parent's own search so the refreshed list stays limited

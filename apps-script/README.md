@@ -132,6 +132,18 @@ anyone — an existing row for that date and member is updated in place.
 | Sign In At / Signed In By | timestamp + the name the parent typed |
 | Sign Out At / Signed Out By | timestamp + the name the parent typed |
 | Setup By / Setup At | who built the roster, and when |
+| PIN | the 4-digit collection PIN issued at sign-in, cleared at sign-out |
+
+The **PIN** is generated when a parent signs children in and must be given back
+to sign them out, so only the adult who dropped a child off can collect them.
+Children signed in together share one PIN, and a family that already has
+children in care keeps the PIN it was given. It is visible to staff on
+**Tracking > Setup Sunday School** for when a parent forgets theirs, and is
+never sent to the parent-facing kiosk except at the moment it is issued.
+
+If you are upgrading an existing sheet, re-run `setup()` to add the `PIN`
+column — rows signed in before it existed have no PIN and can still be signed
+out without one.
 
 ### `App Users` — admin console logins
 
@@ -167,7 +179,8 @@ The script refuses to demote or disable the last active admin.
 3. Share the **parent check-in link** (`/sunday-school-checkin/`) — on a foyer
    tablet, or by text/QR code. Parents type their last name or family group,
    tick **In**, and tick **Out** at pick-up. **Out** stays greyed out until the
-   child is signed in.
+   child is signed in. Signing in shows the parent a **4-digit collection PIN**
+   which they must type back in to sign out.
 4. **Reports > Attendance Report** / **Sunday School Report** — set the range
    (or press **This Week**), then **Export CSV** or **Print**.
 
@@ -188,7 +201,9 @@ Worth being clear about, since this is a static site with a public API:
 * The Sunday School kiosk actions are deliberately unauthenticated so parents
   can use them. They need at least two letters of a last name or family group
   and return only matching children for the current roster — never the whole
-  list. Sign-in and sign-out both record the name the parent typed.
+  list. Sign-in and sign-out both record the name the parent typed, and a
+  sign-out is refused unless it carries the PIN issued at sign-in. Rosters sent
+  to the kiosk have the PINs stripped out.
 * Anyone who can read the repository can see the `/exec` URL, so treat the
   spreadsheet as the security boundary: keep it shared with the church admin
   account only, and change the bootstrap password immediately.

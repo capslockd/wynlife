@@ -160,7 +160,11 @@ The `apps-script` folder is excluded from the Jekyll build, and both new pages
 are `noindex` and disallowed in `robots.txt`.
 
 Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
-(+ user management). Read `apps-script/README.md` before changing anything here.
+(+ user management). Signing a child in at the kiosk issues the parent a
+4-digit **collection PIN** which they must give back to sign the child out;
+staff can see it on *Tracking > Setup Sunday School*. Read
+`apps-script/README.md` before changing anything here — a schema change there
+needs `setup()` re-run on the sheet.
 
 ## Common Issues and Solutions
 

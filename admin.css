@@ -46,6 +46,37 @@
   padding-top: 32px;
   align-items: start;
 }
+/* Without this a wide table stretches the column and the whole page scrolls. */
+.adm-layout > main { min-width: 0; }
+
+/* Mobile-only menu toggle — hidden on desktop, where the sidebar is always up. */
+.adm-menu-toggle {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius);
+  padding: 13px 16px;
+  cursor: pointer;
+  text-align: left;
+}
+.adm-menu-toggle .adm-menu-toggle-current {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  opacity: 0.9;
+}
+.adm-menu-toggle .adm-menu-toggle-caret { transition: transform 0.2s; }
+.adm-menu-toggle[aria-expanded="true"] .adm-menu-toggle-caret { transform: rotate(180deg); }
 
 /* ── Side menu ── */
 .adm-menu {
@@ -153,6 +184,13 @@
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
 }
+/* "(optional)" tag inside a field label — quieter than the label itself. */
+.adm-optional {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--gray);
+}
 .adm-hint {
   font-size: 0.8rem;
   color: var(--gray);
@@ -210,7 +248,7 @@
 .adm-msg:empty { display: none; }
 
 /* ── Tables ── */
-.adm-table-wrap { overflow-x: auto; }
+.adm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
 .adm-table {
   width: 100%;
   border-collapse: collapse;
@@ -329,6 +367,7 @@
   color: var(--navy);
   margin-bottom: 10px;
 }
+.kiosk .adm-sub { margin-bottom: 16px; }
 .kiosk-date {
   font-size: 0.72rem;
   font-weight: 700;
@@ -358,6 +397,34 @@
 }
 .kiosk-kid .meta { font-size: 0.82rem; color: var(--gray); margin-top: 2px; }
 
+/* The collection PIN handed to a parent at sign-in. */
+.kiosk-pin {
+  background: var(--navy);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.kiosk-pin-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.kiosk-pin-code {
+  font-family: 'Merriweather', serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  line-height: 1.25;
+  margin: 4px 0 2px;
+  /* The letter-spacing hangs off the last digit; nudge it back to centre. */
+  text-indent: 0.22em;
+}
+.kiosk-pin-note { font-size: 0.85rem; opacity: 0.85; line-height: 1.55; }
+
 /* ── Print: reports only ── */
 @media print {
   .main-nav, .mobile-nav, .adm-menu, .adm-topbar, .adm-toolbar,
@@ -369,8 +436,60 @@
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
-  .adm-layout { grid-template-columns: 1fr; gap: 20px; }
-  .adm-menu { position: static; }
+  .adm-wrap { padding-bottom: 56px; }
+
+  .adm-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-top: 18px;
+  }
+
+  /* The sidebar becomes a drawer opened by the toggle above it. */
+  .adm-menu-toggle { display: flex; }
+  .adm-menu { position: static; display: none; }
+  .adm-menu.is-open { display: block; }
+  .adm-menu a { padding: 13px 18px; font-size: 1rem; }
+
+  .adm-topbar { padding: 14px var(--side-pad); }
+  .adm-topbar-inner { gap: 10px; }
+  .adm-topbar h1 { font-size: 1rem; }
+  .adm-topbar .adm-who { width: 100%; justify-content: space-between; }
+
   .adm-grid-2 { grid-template-columns: 1fr; }
   .adm-panel { padding: 20px 16px; }
+  .adm-panel h2 { font-size: 1.2rem; }
+  .adm-panel + .adm-panel { margin-top: 16px; }
+
+  /* 16px stops iOS zooming the page in when a field is focused. */
+  .adm-field input[type=text],
+  .adm-field input[type=email],
+  .adm-field input[type=password],
+  .adm-field input[type=date],
+  .adm-field input[type=search],
+  .adm-field select,
+  .adm-field textarea { font-size: 16px; }
+
+  .adm-toolbar { gap: 10px; }
+  .adm-toolbar .adm-field { min-width: 0; flex: 1 1 160px; }
+  .adm-toolbar .adm-field .adm-btn { width: 100%; }
+
+  .adm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .adm-stat { padding: 12px 14px; }
+  .adm-stat .v { font-size: 1.35rem; }
+
+  .adm-table { font-size: 0.85rem; }
+  .adm-table th, .adm-table td { padding: 9px 10px; }
+
+  .adm-login { margin: 32px auto; padding: 26px 20px; }
+}
+
+@media (max-width: 560px) {
+  .adm-topbar h1 { font-size: 0.92rem; }
+  .adm-actions { gap: 8px; }
+  .adm-actions .adm-btn { flex: 1 1 100%; text-align: center; }
+  .adm-actions .adm-btn.small { flex: 0 1 auto; }
+  .kiosk { padding: 26px var(--side-pad-sm) 60px; }
+  .kiosk h1 { font-size: 1.4rem; }
+  .kiosk-kid { gap: 10px; padding: 12px 12px; }
+  .kiosk-kid .name { font-size: 1rem; }
 }
