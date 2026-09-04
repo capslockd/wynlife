@@ -141,7 +141,7 @@ The website is hosted on a static server. Updates should be made to the appropri
 ## Church Management App (`/admin/`)
 
 A separate, login-protected console lives at `/admin/`, linked from the **About**
-dropdown as *Church Admin*. It is a static single-page app; all data lives in the
+dropdown as *Manage*. It is a static single-page app; all data lives in the
 Google Sheet **"Wynlife Management App Data Sheet"** and is reached through a
 Google Apps Script web app.
 
