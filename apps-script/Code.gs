@@ -30,7 +30,8 @@ var HEADERS = {
   members: [
     'Member ID', 'First Name', 'Last Name', 'Date of Birth', 'Special Dates',
     'Sunday Schooler', 'Grouped as Family', 'Family Group Name',
-    'Mobile', 'Email', 'Notes', 'Active', 'Created At', 'Updated At', 'Suburb'
+    'Mobile', 'Email', 'Notes', 'Active', 'Created At', 'Updated At', 'Suburb',
+    'Mailing Address'
   ],
   attendance: [
     'Record ID', 'Service Date', 'Member ID', 'First Name', 'Last Name',
@@ -548,6 +549,7 @@ function memberOut_(row) {
     mobile: str_(row['Mobile']),
     email: str_(row['Email']),
     suburb: str_(row['Suburb']),
+    mailingAddress: str_(row['Mailing Address']),
     notes: str_(row['Notes']),
     active: bool_(row['Active']),
     createdAt: str_(row['Created At']),
@@ -577,6 +579,7 @@ function memberPatch_(body) {
   if (body.mobile !== undefined)          patch['Mobile'] = str_(body.mobile);
   if (body.email !== undefined)           patch['Email'] = str_(body.email);
   if (body.suburb !== undefined)          patch['Suburb'] = str_(body.suburb);
+  if (body.mailingAddress !== undefined)  patch['Mailing Address'] = str_(body.mailingAddress);
   if (body.notes !== undefined)           patch['Notes'] = str_(body.notes);
   if (body.active !== undefined)          patch['Active'] = bool_(body.active);
   return patch;
