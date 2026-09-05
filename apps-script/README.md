@@ -105,6 +105,7 @@ does not need to change.
 | Active | `FALSE` keeps the person on the attendance roll only while they belong to a family group; history is never deleted |
 | Created At / Updated At | set by the app |
 | Suburb | optional; also searchable on *Modify Member* |
+| Mailing Address | optional; free text, may span several lines |
 
 ### `Attendance Tracking Data` — one row per member per service
 
@@ -148,8 +149,8 @@ marking a child as collected on arrival. The kiosk greys the **Out** box out
 until then, shows the time they can be collected, and unlocks itself when that
 time arrives.
 
-If you are upgrading an existing sheet, re-run `setup()` to add the `PIN` and
-`Suburb` columns — rows signed in before the PIN existed have none and can
+If you are upgrading an existing sheet, re-run `setup()` to add the `PIN`,
+`Suburb` and `Mailing Address` columns — rows signed in before the PIN existed have none and can
 still be signed out without one.
 
 ### `App Users` — admin console logins

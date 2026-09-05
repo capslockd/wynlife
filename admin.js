@@ -481,6 +481,9 @@
         field('Suburb <span class="adm-optional">(optional)</span>',
           '<input type="text" id="mSuburb" value="' + esc(member.suburb || '') + '">') +
       '</div>' +
+      field('Mailing address <span class="adm-optional">(optional)</span>',
+        '<textarea id="mAddress" rows="3" placeholder="12 Example St\nWyndham Vale VIC 3024">' +
+        esc(member.mailingAddress || '') + '</textarea>') +
       field('Special dates',
         '<textarea id="mSpecial" placeholder="Baptism: 2019-04-21; Wedding anniversary: 2012-06-10">' +
         esc(member.specialDates || '') + '</textarea>',
@@ -508,6 +511,7 @@
       mobile: val('mMobile'),
       email: val('mEmail'),
       suburb: val('mSuburb'),
+      mailingAddress: val('mAddress'),
       specialDates: val('mSpecial'),
       familyGroupName: val('mFamily'),
       notes: val('mNotes'),
