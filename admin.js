@@ -704,7 +704,7 @@
         '<div class="adm-stat"><div class="v" id="attKidCount">0</div>' +
           '<div class="k">Sunday Schoolers present</div></div>' +
         '<div class="adm-stat"><div class="v">' + rows.length + '</div>' +
-          '<div class="k">On the roll</div></div>' +
+          '<div class="k">Number of Attendees Registered</div></div>' +
       '</div>' +
       '<p class="adm-sub"><strong>' + esc(A.prettyDate(date)) + '</strong></p>' +
       '<div class="adm-actions" style="margin-bottom:16px;">' +
@@ -788,9 +788,11 @@
 
     on('attSave', 'click', function () {
       busy('attSave', true, 'Saving…');
-      var entries = rows.map(function (row) {
-        return { memberId: row.memberId, present: !!state[row.memberId] };
-      });
+      /* Only ticked members are sent — absentees are never recorded. */
+      var entries = rows.filter(function (row) { return !!state[row.memberId]; })
+        .map(function (row) {
+          return { memberId: row.memberId, present: true };
+        });
       A.call('saveAttendance', { serviceDate: date, entries: entries }).then(function (data) {
         return loadAttendance(true).then(function () {
           msgHtml('attMsg', esc(data.message) +
@@ -817,8 +819,9 @@
       '<strong>present</strong> on the chosen Sunday who is flagged as a ' +
       '<strong>Sunday Schooler</strong>. Parents then sign their children in and ' +
       'out from the link below, and every action is timestamped on the ' +
-      '<strong>Sunday School Data</strong> sheet. Signing in issues the parent a ' +
-      '4-digit PIN which they must give back to sign the child out — the ' +
+      '<strong>Sunday School Data</strong> sheet. At sign-in the parent chooses their ' +
+      'own 4-digit PIN, which they must give back to sign the child out, and no ' +
+      'child can be collected until 15 minutes after sign-in — the ' +
       '<strong>PIN</strong> column below is there for when a parent forgets theirs.',
       '<div class="adm-msg" id="ssMsg"></div>' +
       '<div class="adm-toolbar">' +

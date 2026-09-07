@@ -105,6 +105,7 @@
     'whats-on.html':      'nav-whatson',
     'next-steps.html':    'nav-nextsteps',
     'about.html':         'nav-about',
+    'give.html':          'nav-give',
     'pray.html':          'nav-pray'
   };
   var activeId = activeMap[page];

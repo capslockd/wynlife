@@ -160,7 +160,7 @@ The `apps-script` folder is excluded from the Jekyll build, and both new pages
 are `noindex` and disallowed in `robots.txt`.
 
 Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
-(+ user management). Signing a child in at the kiosk issues the parent a
+(+ user management). At sign-in at the kiosk the parent chooses their own
 4-digit **collection PIN** which they must give back to sign the child out,
 and no child can be collected until 15 minutes after sign-in
 (`MIN_CARE_MINUTES`); staff can see the PIN on *Tracking > Setup Sunday
