@@ -681,12 +681,16 @@ function apiGetAttendance_(session, body) {
  * updated in place and new members get appended, so a Sunday can be edited
  * repeatedly without ever duplicating a member.
  */
+/**
+ * Saves attendance for a date. Only the members ticked present are written to
+ * the sheet — nobody is recorded as absent. If someone was saved present
+ * earlier and has since been un-ticked, their row for that date is removed.
+ */
 function apiSaveAttendance_(session, body) {
   requireRole_(session, 'planner');
   var serviceDate = dateKey_(body.serviceDate);
   if (!serviceDate) throw new Error('A service date is required.');
   var entries = body.entries || [];
-  if (!entries.length) throw new Error('Nothing to save.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -705,19 +709,23 @@ function apiSaveAttendance_(session, body) {
 
     var stamp = nowIso_();
     var toAppend = [];
-    var updated = 0, created = 0, presentCount = 0;
+    var updated = 0, created = 0, removed = 0, presentCount = 0;
+    var ticked = {};
 
     entries.forEach(function (entry) {
       var memberId = str_(entry.memberId);
       var member = memberById[memberId];
       if (!member) return;
-      var present = bool_(entry.present);
-      if (present) presentCount++;
+      /* Absentees are never written — only ticked members are recorded. */
+      if (!bool_(entry.present)) return;
+
+      ticked[memberId] = true;
+      presentCount++;
 
       var existing = existingByMember[memberId];
       if (existing) {
         updateRow_(SHEETS.attendance, existing._row, {
-          'Present': present,
+          'Present': true,
           'Family Group Name': str_(member['Family Group Name']),
           'Sunday Schooler': bool_(member['Sunday Schooler']),
           'Recorded By': session.email,
@@ -733,12 +741,25 @@ function apiSaveAttendance_(session, body) {
           'Last Name': str_(member['Last Name']),
           'Family Group Name': str_(member['Family Group Name']),
           'Sunday Schooler': bool_(member['Sunday Schooler']),
-          'Present': present,
+          'Present': true,
           'Recorded By': session.email,
           'Recorded At': stamp
         });
         created++;
       }
+    });
+
+    /* Anyone previously recorded for this date but no longer ticked is dropped.
+       Rows are deleted bottom-up so the earlier row numbers stay valid. */
+    var staleRows = [];
+    Object.keys(existingByMember).forEach(function (memberId) {
+      if (!ticked[memberId]) staleRows.push(existingByMember[memberId]._row);
+    });
+    staleRows.sort(function (a, b) { return b - a; });
+    var attSheet = sheet_(SHEETS.attendance);
+    staleRows.forEach(function (rowNumber) {
+      attSheet.deleteRow(rowNumber);
+      removed++;
     });
 
     /* Record IDs are assigned in one pass so the batch append stays fast. */
@@ -751,8 +772,10 @@ function apiSaveAttendance_(session, body) {
       serviceDate: serviceDate,
       created: created,
       updated: updated,
+      removed: removed,
       presentCount: presentCount,
-      message: 'Attendance saved for ' + serviceDate + ' — ' + presentCount + ' present.'
+      message: 'Attendance saved for ' + serviceDate + ' \u2014 ' + presentCount +
+        ' recorded' + (removed ? ' (' + removed + ' removed)' : '') + '.'
     };
   } finally {
     lock.releaseLock();
@@ -909,36 +932,20 @@ function tooSoonToCollect_(signInIso) {
   return mins !== '' && mins < MIN_CARE_MINUTES;
 }
 
-/** PINs currently held by each family group with children still in care. */
-function liveFamilyPins_(serviceDate, rows) {
-  var pins = {};
-  rows.forEach(function (row) {
-    if (dateKey_(row['Service Date']) !== serviceDate) return;
-    if (str_(row['Status']) !== 'Signed In') return;
-    var family = str_(row['Family Group Name']);
-    var pin = str_(row['PIN']);
-    if (family && pin) pins[family] = pin;
-  });
-  return pins;
-}
-
 /**
- * A fresh 4-digit PIN for one sign-in, avoiding any PIN already held by a
- * child still in care on the same day so two families can never collide.
- * 1000-9999 only, so a leading zero can't be lost by the spreadsheet.
+ * Parents choose their own collection PIN at sign-in, so all we do here is
+ * insist on exactly four digits. 1000-9999 only, so a leading zero can't be
+ * lost by the spreadsheet.
  */
-function newSsPin_(serviceDate) {
-  var taken = {};
-  readRows_(SHEETS.sundaySchool).forEach(function (row) {
-    if (dateKey_(row['Service Date']) !== serviceDate) return;
-    if (str_(row['Status']) !== 'Signed In') return;
-    taken[str_(row['PIN'])] = true;
-  });
-  for (var attempt = 0; attempt < 200; attempt++) {
-    var pin = String(Math.floor(Math.random() * 9000) + 1000);
-    if (!taken[pin]) return pin;
+function cleanSsPin_(raw) {
+  var pin = str_(raw).replace(/[^0-9]/g, '');
+  if (pin.length !== 4) {
+    throw new Error('Please choose a 4-digit PIN (numbers only).');
   }
-  throw new Error('Could not allocate a check-in PIN. Please see the Sunday School team.');
+  if (pin.charAt(0) === '0') {
+    throw new Error('Your PIN cannot start with a zero. Please choose another.');
+  }
+  return pin;
 }
 
 /** The most recent date that has a Sunday School roster set up. */
@@ -980,9 +987,10 @@ function apiSsRoster_(body) {
 }
 
 /**
- * Signing in mints one 4-digit PIN for the whole batch and stores it against
- * each child; signing out demands that PIN back, so only the adult who dropped
- * a child off can collect them.
+ * At sign-in the parent chooses their own 4-digit PIN, which is stored against
+ * each child they sign in; signing out demands that same PIN back, so only the
+ * adult who dropped a child off can collect them. A child also cannot be
+ * collected until MIN_CARE_MINUTES after they were signed in.
  */
 function apiSsSign_(body, direction) {
   var serviceDate = dateKey_(body.serviceDate) || latestSsDate_();
@@ -992,8 +1000,11 @@ function apiSsSign_(body, direction) {
   if (!serviceDate) throw new Error('Sunday School has not been set up yet.');
   if (!ids.length) throw new Error('Please tick at least one child.');
   if (!by) throw new Error('Please enter your name so we know who signed the children ' + direction + '.');
-  if (direction === 'out' && suppliedPin.length !== 4) {
-    throw new Error('Please enter the 4-digit PIN you were given when you signed in.');
+  if (direction === 'in') {
+    /* Throws unless the parent picked a usable four-digit PIN. */
+    suppliedPin = cleanSsPin_(body.pin);
+  } else if (suppliedPin.length !== 4) {
+    throw new Error('Please enter the 4-digit PIN you chose when you signed in.');
   }
 
   var lock = LockService.getScriptLock();
@@ -1001,11 +1012,6 @@ function apiSsSign_(body, direction) {
   try {
     var rows = readRows_(SHEETS.sundaySchool);
     var stamp = nowIso_();
-    /* A family that already has children in care keeps the PIN it was given,
-       so a late arrival never leaves a parent holding two of them. */
-    var familyPins = liveFamilyPins_(serviceDate, rows);
-    var batchPin = direction === 'in' ? newSsPin_(serviceDate) : '';
-    var pinsIssued = [];
     var done = [], skipped = [], pinFailed = [], tooSoon = [];
 
     ids.forEach(function (recordId) {
@@ -1023,12 +1029,8 @@ function apiSsSign_(body, direction) {
           skipped.push(name + ' (already signed in)');
           return;
         }
-        var family = str_(target['Family Group Name']);
-        var usePin = (family && familyPins[family]) || batchPin;
-        if (family) familyPins[family] = usePin;
-        if (pinsIssued.indexOf(usePin) === -1) pinsIssued.push(usePin);
         updateRow_(SHEETS.sundaySchool, target._row, {
-          'Status': 'Signed In', 'Sign In At': stamp, 'Signed In By': by, 'PIN': usePin
+          'Status': 'Signed In', 'Sign In At': stamp, 'Signed In By': by, 'PIN': suppliedPin
         });
       } else {
         if (status !== 'Signed In') {
@@ -1041,6 +1043,8 @@ function apiSsSign_(body, direction) {
           pinFailed.push(name);
           return;
         }
+        /* The wait is enforced here as well as in the kiosk, so a stale page
+           can never collect a child early. */
         if (tooSoonToCollect_(str_(target['Sign In At']))) {
           tooSoon.push(name + ' (from ' + clockTime_(collectableFrom_(str_(target['Sign In At']))) + ')');
           return;
@@ -1061,9 +1065,6 @@ function apiSsSign_(body, direction) {
       pinFailed: pinFailed,
       tooSoon: tooSoon,
       minCareMinutes: MIN_CARE_MINUTES,
-      /* Only the PINs just handed out go back, and only to whoever signed in. */
-      pins: direction === 'in' ? pinsIssued : [],
-      pin: pinsIssued.length === 1 ? pinsIssued[0] : '',
       roster: publicRoster_(ssRosterFor_(serviceDate)),
       message: done.length
         ? done.length + ' child(ren) signed ' + direction + ' at ' + clockTime_(stamp) + '.'

@@ -429,34 +429,6 @@
 }
 .kiosk-kid .meta { font-size: 0.82rem; color: var(--gray); margin-top: 2px; }
 
-/* The collection PIN handed to a parent at sign-in. */
-.kiosk-pin {
-  background: var(--navy);
-  color: var(--white);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 18px;
-  text-align: center;
-}
-.kiosk-pin-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--gold);
-}
-.kiosk-pin-code {
-  font-family: 'Merriweather', serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  line-height: 1.25;
-  margin: 4px 0 2px;
-  /* The letter-spacing hangs off the last digit; nudge it back to centre. */
-  text-indent: 0.22em;
-}
-.kiosk-pin-note { font-size: 0.85rem; opacity: 0.85; line-height: 1.55; }
-
 /* ── Print: reports only ── */
 @media print {
   .main-nav, .mobile-nav, .adm-menu, .adm-topbar, .adm-toolbar,

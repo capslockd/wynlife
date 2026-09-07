@@ -13,8 +13,6 @@
   var elForm   = document.getElementById('kForm');
 
   var serviceDate = '';
-  /* PINs handed out on this device, shown until the children are collected. */
-  var issuedPins = [];
   /* Unlocks the Out boxes on their own once the wait is up. */
   var unlockTimer = null;
 
@@ -51,7 +49,6 @@
     msg('');
 
     A.call('ssRoster', { query: query }).then(function (data) {
-      issuedPins = [];
       serviceDate = data.serviceDate;
       if (!data.roster.length) {
         msg(data.message || 'No children found. Please check with the Sunday School team.', 'info');
@@ -83,10 +80,10 @@
 
   function render(roster) {
     var anySignedIn = roster.some(function (kid) { return kid.status === 'Signed In'; });
+    var anyExpected = roster.some(function (kid) { return kid.status === 'Expected'; });
 
     elResult.innerHTML =
       '<p class="kiosk-date">Sunday School &mdash; ' + esc(A.prettyDate(serviceDate)) + '</p>' +
-      pinBanner() +
       '<div id="kKids">' +
         roster.map(function (kid) {
           var canIn  = kid.status === 'Expected';
@@ -108,13 +105,24 @@
           'value="' + esc(rememberedName()) + '" autocomplete="name">' +
         '<div class="adm-hint">Recorded against every sign in and sign out.</div>' +
       '</div>' +
+      (anyExpected
+        ? '<div class="adm-field" style="margin-top:16px;">' +
+            '<label>Choose a collection PIN</label>' +
+            '<input type="text" id="kNewPin" inputmode="numeric" pattern="[0-9]*" ' +
+              'maxlength="4" placeholder="1234" autocomplete="off">' +
+            '<div class="adm-hint">Pick any 4 digits (not starting with 0) and ' +
+              'remember them — you will be asked for the same PIN when you come ' +
+              'back to collect your children.</div>' +
+          '</div>'
+        : '') +
       (anySignedIn
         ? '<div class="adm-field" style="margin-top:16px;">' +
             '<label>Collection PIN</label>' +
             '<input type="text" id="kPin" inputmode="numeric" pattern="[0-9]*" ' +
               'maxlength="4" placeholder="0000" autocomplete="off">' +
-            '<div class="adm-hint">The 4-digit PIN you were given when you signed ' +
-              'your children in. Only needed to sign them out.</div>' +
+            '<div class="adm-hint">The 4-digit PIN you chose when you signed your ' +
+              'children in. Only needed to sign them out, and only 15 minutes ' +
+              'after they were signed in.</div>' +
           '</div>'
         : '') +
       '<div class="adm-actions" style="margin-top:16px;">' +
@@ -161,16 +169,6 @@
     '</label>';
   }
 
-  function pinBanner() {
-    if (!issuedPins.length) return '';
-    return '<div class="kiosk-pin">' +
-      '<div class="kiosk-pin-label">Your collection PIN</div>' +
-      '<div class="kiosk-pin-code">' + issuedPins.map(esc).join(' &middot; ') + '</div>' +
-      '<div class="kiosk-pin-note">Keep this safe — you will be asked for it when ' +
-        'you collect your ' + (issuedPins.length > 1 ? 'children' : 'child') + '.</div>' +
-    '</div>';
-  }
-
   function rememberedName() {
     try { return localStorage.getItem('wynlife_ss_parent') || ''; } catch (err) { return ''; }
   }
@@ -188,7 +186,9 @@
   function confirmTicks() {
     var by = document.getElementById('kBy').value.trim();
     var pinEl = document.getElementById('kPin');
+    var newPinEl = document.getElementById('kNewPin');
     var pin = pinEl ? pinEl.value.replace(/[^0-9]/g, '') : '';
+    var newPin = newPinEl ? newPinEl.value.replace(/[^0-9]/g, '') : '';
     var signIns = ticked('in');
     var signOuts = ticked('out');
 
@@ -201,8 +201,18 @@
       document.getElementById('kBy').focus();
       return;
     }
+    if (signIns.length && newPin.length !== 4) {
+      msg('Please choose a 4-digit collection PIN for your children.', 'error');
+      if (newPinEl) newPinEl.focus();
+      return;
+    }
+    if (signIns.length && newPin.charAt(0) === '0') {
+      msg('Your PIN cannot start with a zero. Please choose another.', 'error');
+      if (newPinEl) newPinEl.focus();
+      return;
+    }
     if (signOuts.length && pin.length !== 4) {
-      msg('Please enter the 4-digit PIN you were given when you signed in.', 'error');
+      msg('Please enter the 4-digit PIN you chose when you signed in.', 'error');
       if (pinEl) pinEl.focus();
       return;
     }
@@ -216,12 +226,16 @@
 
     /* Sign-ins go first so a child ticked for both is handled in order. */
     var chain = signIns.length
-      ? A.call('ssSignIn', { serviceDate: serviceDate, recordIds: signIns, by: by })
-          .then(function (data) {
-            collect(notes, problems, data);
-            if (data.pins && data.pins.length) issuedPins = data.pins;
-            return data;
-          })
+      ? A.call('ssSignIn', {
+          serviceDate: serviceDate, recordIds: signIns, by: by, pin: newPin
+        }).then(function (data) {
+          collect(notes, problems, data);
+          if (data.done && data.done.length) {
+            notes.push('Remember your PIN — you will need it to collect them, ' +
+                       'and only from 15 minutes after sign in.');
+          }
+          return data;
+        })
       : Promise.resolve(null);
 
     chain
@@ -231,8 +245,6 @@
           serviceDate: serviceDate, recordIds: signOuts, by: by, pin: pin
         }).then(function (data) {
           collect(notes, problems, data);
-          /* Once children are collected the PIN they were signed in on is spent. */
-          if (data.done && data.done.length && !signIns.length) issuedPins = [];
           return data;
         });
       })
@@ -268,7 +280,7 @@
     if (data.pinFailed && data.pinFailed.length) {
       problems.push('<strong>Incorrect PIN.</strong> ' + data.pinFailed.map(esc).join(', ') +
         ' ' + (data.pinFailed.length === 1 ? 'was' : 'were') + ' not signed out. Please check ' +
-        'the 4-digit PIN you were given at sign in, or see one of the Sunday School team.');
+        'the 4-digit PIN you chose at sign in, or see one of the Sunday School team.');
     }
     if (data.tooSoon && data.tooSoon.length) {
       problems.push('<strong>Too soon to collect.</strong> ' + data.tooSoon.map(esc).join(', ') +
