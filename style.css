@@ -546,6 +546,7 @@ body.menu-open {
   text-align: center;
   padding: 8px 32px;
   border-right: 1px solid rgba(255,255,255,0.18);
+  min-width: 0;
 }
 .service-item:last-child { border-right: none; }
 .service-label {
@@ -1232,19 +1233,9 @@ textarea.field-input { resize: vertical; min-height: 130px; }
 }
 
 /* ══════════════════════════════════════════
-   RESPONSIVE — MOBILE  (≤ 600px)
+   RESPONSIVE — SERVICE STRIP STACK  (≤ 780px)
 ══════════════════════════════════════════ */
-@media (max-width: 600px) {
-
-  :root {
-    --side-pad: 16px;
-  }
-
-  /* Nav */
-  .nav-inner { height: 58px; padding: 0 var(--side-pad); }
-  .nav-logo img { height: 38px; }
-
-  /* Service strip — vertical stack */
+@media (max-width: 780px) {
   .service-strip {
     flex-direction: column;
     align-items: stretch;
@@ -1257,12 +1248,32 @@ textarea.field-input { resize: vertical; min-height: 130px; }
     padding: 12px 0;
     text-align: left;
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     align-items: baseline;
+    min-width: 0;
   }
   .service-item:last-child { border-bottom: none; }
-  .service-label { min-width: 110px; flex-shrink: 0; }
-  .service-detail { display: none; } /* hide detail on tiny screens */
+  .service-label { min-width: 148px; flex-shrink: 0; }
+  .service-value,
+  .service-detail { min-width: 0; overflow-wrap: anywhere; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE  (≤ 600px)
+══════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  :root {
+    --side-pad: 16px;
+  }
+
+  /* Nav */
+  .nav-inner { height: 58px; padding: 0 var(--side-pad); }
+  .nav-logo img { height: 38px; }
+
+  /* Service strip — hide secondary detail on tiny screens */
+  .service-detail { display: none; }
 
   /* Hero buttons stacked */
   .hero-btns { flex-direction: column; align-items: center; }
