@@ -815,7 +815,7 @@ window.WynNewsletter = (function () {
         title: 'Generous Hearts',
         intro: 'We thank you for your kingdom partnership! Please note, we have a white box near ' +
                'the worship hall door. Our account details for electronic giving:',
-        imageUrl: SITE + '/assets/newsletter/generous-hearts.png',
+        imageUrl: SITE + '/assets/newsletter/generous-hearts.jpg',
         imageAlt: 'Generous Hearts — 2 Corinthians 9:7',
         rows: [
           { k: 'Account name', v: 'Wyn Life Church' },
@@ -833,14 +833,14 @@ window.WynNewsletter = (function () {
               'and screened, and our policies and code of conduct are kept up to date and continuously ' +
               'reviewed. For more information, see ccyp.vic.gov.au.',
         images: [
-          { url: SITE + '/assets/newsletter/childsafe-banner.png',
+          { url: SITE + '/assets/newsletter/childsafe-banner.jpg',
             alt: 'We take the safety of children seriously — childsafe.org.au' },
-          { url: SITE + '/assets/newsletter/child-safe-standards.png',
+          { url: SITE + '/assets/newsletter/child-safe-standards.jpg',
             alt: 'Victoria’s Child Safe Standards — plain language summary' }
         ]
       },
       footer: {
-        closingImageUrl: SITE + '/assets/newsletter/church-family.png',
+        closingImageUrl: SITE + '/assets/newsletter/church-family.jpg',
         closingImageAlt: 'The WynLife Church family',
         closingTitle: 'New here?\nStart with a Sunday.',
         closingText: '10:00 AM · 208 Ballan Rd (next to KFC), Wyndham Vale VIC 3024',
@@ -858,6 +858,114 @@ window.WynNewsletter = (function () {
         legal: 'You’re receiving this because you’re part of the WynLife family.'
       }
     };
+  }
+
+  /**
+   * A worked example, built from the design mockup: a real sermon and the
+   * four announcements that run most weeks, with their pictures already on
+   * the church website. Opening it from the history gives a new issue to
+   * edit down rather than a blank page to fill.
+   */
+  function sample() {
+    var c = blank();
+    var img = SITE + '/assets/newsletter/';
+
+    c.subject = 'Be Strong and Courageous — this Sunday at WynLife';
+    c.preheader = 'Joshua 1:1-9 this Sunday, plus Wednesday prayer, Life Groups, ' +
+                  'Fellowship Lunch and Food Bank Term 4 dates.';
+
+    c.sermon.kicker = 'This Sunday · 10:00 AM';
+    c.sermon.title = 'BE STRONG AND COURAGEOUS';
+    c.sermon.reference = 'Joshua 1:1-9';
+    c.sermon.imageUrl = img + 'hero-be-strong.jpg';
+    c.sermon.imageAlt = 'Be Strong and Courageous — Joshua 1:1-9';
+    c.sermon.body =
+      'In Joshua 1, God commanded Joshua to “be strong and courageous” as he ' +
+      'prepared to lead Israel. His strength was not simply in Himself but in his ' +
+      'faith, obedience, and dependence on God.\n\n' +
+      'As fathers, we are also called to lead our families with strength and ' +
+      'courage—not relying on our own abilities, but being strong in the Lord and ' +
+      'in His Word. Let’s learn from Joshua what it means to father with God’s ' +
+      'strength, courage, and faith.';
+
+    c.announcements[0] = merge(c.announcements[0], {
+      enabled: true,
+      label: 'Gatherings',
+      contentsLabel: 'Wednesday Night Prayer',
+      title: 'Wednesday Night Prayer',
+      body: 'Corporate prayer and worship every Wednesday evening as a church family, ' +
+            '7:00 PM at the WynLife Centre. For prayer requests, please reach out to ' +
+            'Ps. Jimm or Andrew Jelbart.',
+      imageUrl: img + 'prayer-wednesdays.jpg',
+      imageAlt: 'Prayer — 7PM Wednesdays',
+      quote: 'Rejoice always, pray without ceasing, in everything give thanks; for ' +
+             'this is the will of God in Christ Jesus for you.',
+      quoteRef: '1 Thess. 5:16',
+      linkLabel: 'Let us pray for you',
+      linkUrl: SITE + '/pray/'
+    });
+
+    c.announcements[1] = merge(c.announcements[1], {
+      enabled: true,
+      label: 'Life Groups',
+      contentsLabel: 'Life Groups',
+      title: 'Wyndham Vale, Werribee, Tarneit & Hoppers Crossing',
+      body: 'Groups meet through the week across Wyndham Vale, Werribee, Tarneit ' +
+            '& Hoppers Crossing. To find out more about our life groups, please ' +
+            'connect to Val and/or Ephraim.',
+      imageUrl: img + 'life-groups.jpg',
+      imageAlt: 'WynLife Life Groups',
+      linkLabel: 'Find a group',
+      linkUrl: SITE + '/gatherings/#life-groups'
+    });
+
+    c.announcements[2] = merge(c.announcements[2], {
+      enabled: true,
+      label: 'Fellowship Lunch',
+      contentsLabel: 'Fellowship Lunch',
+      title: 'First Sunday of the month',
+      body: 'First Sunday of the month, after the service. Invite a friend and bring ' +
+            'a plate to share.',
+      imageUrl: img + 'fellowship-lunch.jpg',
+      imageAlt: 'Fellowship Lunch — invite a friend, bring a plate to share',
+      linkLabel: 'Learn more',
+      linkUrl: SITE + '/whats-on/#fellowship-lunch'
+    });
+
+    c.announcements[3] = merge(c.announcements[3], {
+      enabled: true,
+      label: 'Food Bank Manor Lakes',
+      contentsLabel: 'Food Bank Manor Lakes',
+      title: 'Expressing God’s grace and love, one life at a time – through ' +
+             'long life groceries.',
+      body: 'If you are able to give toiletries and financial support to cover the ' +
+            'operational costs—truck rental, petrol, and food—it will be ' +
+            'greatly appreciated!\n\n' +
+            'Donations of $2+ are now tax deductible. Please contact PYNQI for your ' +
+            'invoice. RJC Ministry Centre Inc | BSB: 062339 | A#10696497',
+      imageUrl: img + 'food-bank.jpg',
+      imageAlt: 'Food Bank Manor Lakes — 2nd and 4th Wednesdays, 12PM–1:15PM, ' +
+                '86 Manor Lakes Blvd, Manor Lakes VIC 3024',
+      details: [
+        { k: 'Term 3 dates', v: 'July 22 · Aug 12, 26 · Sept 9' },
+        { k: 'Term 4 dates', v: 'Oct 14, 28 · Nov 11, 25 · Dec 9' },
+        { k: 'When', v: '2nd & 4th Wednesdays of the month except school holidays ' +
+                        '· 12PM–1:15PM' },
+        { k: 'Where', v: '86 Manor Lakes Blvd, Manor Lakes VIC 3024' },
+        { k: 'Registration', v: 'Required from 10AM at the reception. Priority for ' +
+                                'those with a concession card. First come, first ' +
+                                'served. Bring own shopping bag.' }
+      ],
+      quote: 'A generous soul will prosper, and he who refreshes others will himself ' +
+             'be refreshed.',
+      quoteRef: 'Prov. 11:25 BSB'
+    });
+
+    /* The fifth slot is left free for whatever is on that week — an
+       anniversary, a working bee, a guest speaker. */
+    c.announcements[4] = merge(c.announcements[4], { enabled: false });
+
+    return c;
   }
 
   /** Fills in anything a stored issue is missing, so old issues still render. */
@@ -940,6 +1048,7 @@ window.WynNewsletter = (function () {
     SITE: SITE,
     UNSUB_PLACEHOLDER: UNSUB,
     blank: blank,
+    sample: sample,
     normalise: normalise,
     render: render,
     preview: preview,

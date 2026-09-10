@@ -194,8 +194,20 @@ Script — if you change a design, change it there.
 
 Sends are chunked (40 recipients per request) because Apps Script kills any
 request at six minutes; the console loops until the backend reports `done`.
-The standing images the defaults point at live in `assets/newsletter/`.
 The Brevo API key is in Script Properties, never in the sheet or the repo.
+
+`WynNewsletter.sample()` is a complete worked issue built from the design
+mockup, reachable at `#/newsletter/compose/sample`. Its pictures, and the
+standing ones the defaults point at, live in `assets/newsletter/`.
+
+Uploaded pictures are prepared **in the browser** before they are sent
+(`prepareImage` in `admin.js`): longest edge capped at 1200px (2× the widest
+column), re-encoded to JPEG at falling quality until under 500 KB, kept as PNG
+only when the image really uses transparency, EXIF rotation applied, GIF/SVG
+passed through. Deliberately **not** WebP — Outlook on Windows cannot render
+it. Anything committed to `assets/newsletter/` should get the same treatment
+by hand; the images there are already JPEG except the three logos, which need
+their alpha.
 
 ## Common Issues and Solutions
 

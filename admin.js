@@ -1329,6 +1329,15 @@
   /* ── Compose ── */
 
   function viewNewsletterCompose(newsletterId) {
+    /* #/newsletter/compose/sample — the worked example, ready to edit down. */
+    if (newsletterId === 'sample') {
+      nlDraft = W.sample();
+      nlDraft.issueDate = A.isoDate(new Date());
+      nlId = '';
+      renderCompose('This is the sample issue — a full week filled in, pictures and ' +
+                    'all. Edit it to suit, then press Save Draft to make it yours.');
+      return;
+    }
     if (newsletterId) {
       loading('Opening newsletter…');
       A.call('nlGet', { newsletterId: newsletterId }).then(function (data) {
@@ -1590,33 +1599,223 @@
     thumb.hidden = !url;
   }
 
+  /* ── Preparing a picture for email ──
+     A photo straight off a phone is 4000px wide and several megabytes. At
+     600px in an inbox none of that is visible — it is just a slow download
+     for every recipient, on whatever data plan they are on. So the browser
+     shrinks and re-compresses before anything is uploaded.
+
+     1200px is twice the widest column, which keeps it sharp on a retina
+     screen and throws away the rest. JPEG unless the picture actually uses
+     transparency, because a photo saved as a PNG is many times larger for no
+     gain. Not WebP: Outlook on Windows renders through Word, which cannot
+     display it, and those people would see a broken image instead of a
+     smaller one.                                                          */
+
+  var NL_MAX_EDGE = 1200;
+  var NL_TARGET_BYTES = 500 * 1024;
+  var NL_JPEG_QUALITY = [0.82, 0.72, 0.62, 0.5];
+
+  /* Animation and vector art do not survive a trip through a canvas. */
+  var NL_PASS_THROUGH = ['image/gif', 'image/svg+xml'];
+
+  function readAsBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        /* data:image/jpeg;base64,AAAA… — Apps Script wants only the tail. */
+        resolve(String(reader.result).split(',')[1] || '');
+      };
+      reader.onerror = function () { reject(new Error('That file could not be read.')); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Decodes the file at its true orientation. A photo taken sideways carries
+   * an EXIF rotation flag rather than rotated pixels, and if that is ignored
+   * the picture ends up on its side in the email.
+   */
+  function decodeImage(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: 'from-image' })
+        .catch(function () { return decodeViaElement(file); });
+    }
+    return decodeViaElement(file);
+  }
+
+  function decodeViaElement(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('That file could not be read as an image.'));
+      };
+      img.src = url;
+    });
+  }
+
+  function drawTo(source, width, height) {
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, 0, 0, width, height);
+    return canvas;
+  }
+
+  /**
+   * Shrinking by more than half in one step drops pixels rather than
+   * averaging them, which makes fine detail sparkle. Halving repeatedly and
+   * finishing on the exact size avoids that.
+   */
+  function scaleDown(source, width, height, targetW, targetH) {
+    var canvas = null;
+    var w = width;
+    var h = height;
+    var from = source;
+    while (w / 2 > targetW) {
+      w = Math.round(w / 2);
+      h = Math.round(h / 2);
+      canvas = drawTo(from, w, h);
+      from = canvas;
+    }
+    return drawTo(from, targetW, targetH);
+  }
+
+  /** True if any pixel is even slightly see-through. */
+  function usesTransparency(canvas) {
+    try {
+      var data = canvas.getContext('2d')
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      for (var i = 3; i < data.length; i += 4) {
+        if (data[i] < 255) return true;
+      }
+      return false;
+    } catch (err) {
+      /* If the pixels cannot be read, assume transparency and keep the PNG. */
+      return true;
+    }
+  }
+
+  function toBlob(canvas, type, quality) {
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(function (blob) {
+        if (blob) resolve(blob); else reject(new Error('The picture could not be re-saved.'));
+      }, type, quality);
+    });
+  }
+
+  /** Re-encodes at falling quality until it comes in under the size target. */
+  function encode(canvas, transparent) {
+    if (transparent) return toBlob(canvas, 'image/png');
+    var step = 0;
+    function attempt() {
+      return toBlob(canvas, 'image/jpeg', NL_JPEG_QUALITY[step]).then(function (blob) {
+        step += 1;
+        if (blob.size <= NL_TARGET_BYTES || step >= NL_JPEG_QUALITY.length) return blob;
+        return attempt();
+      });
+    }
+    return attempt();
+  }
+
+  function kb(bytes) {
+    return bytes >= 1024 * 1024
+      ? (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+      : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  }
+
+  /** Resolves to { base64, mimeType, name, note } ready to hand to the API. */
+  function prepareImage(file, columnWidth) {
+    if (NL_PASS_THROUGH.indexOf(file.type) !== -1) {
+      return readAsBase64(file).then(function (base64) {
+        return {
+          base64: base64,
+          mimeType: file.type,
+          name: file.name,
+          note: 'Uploaded as-is (' + kb(file.size) + ').'
+        };
+      });
+    }
+
+    return decodeImage(file).then(function (source) {
+      var width = source.width || source.naturalWidth;
+      var height = source.height || source.naturalHeight;
+      if (!width || !height) throw new Error('That image has no size the browser can read.');
+
+      var scale = Math.min(1, NL_MAX_EDGE / Math.max(width, height));
+      var targetW = Math.max(1, Math.round(width * scale));
+      var targetH = Math.max(1, Math.round(height * scale));
+
+      var canvas = scale < 1
+        ? scaleDown(source, width, height, targetW, targetH)
+        : drawTo(source, targetW, targetH);
+
+      var transparent = usesTransparency(canvas);
+
+      return encode(canvas, transparent).then(function (blob) {
+        return readAsBase64(blob).then(function (base64) {
+          var notes = [];
+          if (scale < 1) {
+            notes.push('Resized ' + width + '×' + height +
+                       ' → ' + targetW + '×' + targetH + '.');
+          }
+          notes.push(kb(file.size) + ' → ' + kb(blob.size) + '.');
+          /* Worth saying out loud: nothing can add detail that is not there. */
+          if (targetW < columnWidth) {
+            notes.push('Heads up: this is only ' + targetW + 'px wide, so it will ' +
+                       'look soft stretched across the ' + columnWidth + 'px column.');
+          }
+          return {
+            base64: base64,
+            mimeType: blob.type || 'image/jpeg',
+            name: renameFor(file.name, blob.type),
+            note: notes.join(' ')
+          };
+        });
+      });
+    });
+  }
+
+  function renameFor(name, mimeType) {
+    var stem = String(name || 'newsletter-image').replace(/\.[^.]+$/, '');
+    var ext = mimeType === 'image/png' ? '.png'
+            : mimeType === 'image/jpeg' ? '.jpg'
+            : '';
+    return ext ? stem + ext : name;
+  }
+
   function uploadImage(path, file) {
     var note = elView.querySelector('[data-nl-upload-msg="' + path + '"]');
-    if (note) note.textContent = 'Uploading ' + file.name + '…';
+    function say(text) { if (note) note.textContent = text; }
 
-    var reader = new FileReader();
-    reader.onload = function () {
-      /* data:image/png;base64,AAAA… — Apps Script wants only the tail. */
-      var base64 = String(reader.result).split(',')[1] || '';
-      A.call('nlUploadImage', {
-        name: file.name,
-        mimeType: file.type || 'image/png',
-        dataBase64: base64
+    say('Preparing ' + file.name + '…');
+
+    /* The Editorial design insets its pictures; the other two run full bleed. */
+    var columnWidth = nlDraft.design === 'editorial' ? 532 : 600;
+
+    prepareImage(file, columnWidth).then(function (ready) {
+      say('Uploading… ' + ready.note);
+      return A.call('nlUploadImage', {
+        name: ready.name,
+        mimeType: ready.mimeType,
+        dataBase64: ready.base64
       }).then(function (data) {
         nlSet(path, data.url);
         var input = elView.querySelector('[data-nl="' + path + '"]');
         if (input) input.value = data.url;
         syncThumb(path, data.url);
-        if (note) note.textContent = 'Uploaded.';
+        say('Uploaded. ' + ready.note);
         schedulePreview();
-      }).catch(function (err) {
-        if (note) note.textContent = err.message;
       });
-    };
-    reader.onerror = function () {
-      if (note) note.textContent = 'That file could not be read.';
-    };
-    reader.readAsDataURL(file);
+    }).catch(function (err) {
+      say(err.message);
+    });
   }
 
   function schedulePreview() {
@@ -1828,6 +2027,8 @@
         '<div class="adm-msg" id="nlHistMsg"></div>' +
         '<div class="adm-actions" style="margin-bottom:18px;">' +
           '<a class="adm-btn" href="#/newsletter/compose">Compose a New Newsletter</a>' +
+          '<a class="adm-btn secondary" href="#/newsletter/compose/sample">' +
+            'Start from the Sample Issue</a>' +
         '</div>' +
         '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
           '<th>Issue date</th><th>Subject</th><th>Design</th><th>Status</th>' +
