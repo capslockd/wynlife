@@ -32,6 +32,12 @@
     { title: 'Tracking', items: [
       { route: 'tracking/attendance',    label: 'Sunday Attendance',   role: 'planner' },
       { route: 'tracking/sunday-school', label: 'Setup Sunday School', role: 'planner' }
+    ] },
+    { title: 'Newsletter', items: [
+      { route: 'newsletter/compose',    label: 'Compose Newsletter', cap: 'newsletter' },
+      { route: 'newsletter',            label: 'Newsletter History', cap: 'newsletter' },
+      { route: 'newsletter/recipients', label: 'Recipients',         cap: 'newsletter' },
+      { route: 'newsletter/settings',   label: 'Email Settings',     role: 'admin' }
     ] }
   ];
 
@@ -44,13 +50,26 @@
     'tracking/attendance':       viewSundayAttendance,
     'tracking/sunday-school':    viewSetupSundaySchool,
     'reports/attendance':        viewAttendanceReport,
-    'reports/sunday-school':     viewSundaySchoolReport
+    'reports/sunday-school':     viewSundaySchoolReport,
+    'newsletter':                viewNewsletterHistory,
+    'newsletter/compose':        viewNewsletterCompose,
+    'newsletter/recipients':     viewNewsletterRecipients,
+    'newsletter/settings':       viewNewsletterSettings
   };
 
   var ROUTE_ROLE = {};
+  var ROUTE_CAP  = {};
   MENU.forEach(function (group) {
-    group.items.forEach(function (item) { ROUTE_ROLE[item.route] = item.role; });
+    group.items.forEach(function (item) {
+      if (item.role) ROUTE_ROLE[item.route] = item.role;
+      if (item.cap) ROUTE_CAP[item.route] = item.cap;
+    });
   });
+
+  /** Every menu entry is gated either by a minimum role or by a capability. */
+  function allowed(item) {
+    return item.cap ? A.can(item.cap) : A.hasRole(item.role);
+  }
 
   /* ── Boot ────────────────────────────────────────────────────────────── */
 
@@ -120,7 +139,7 @@
     elApp.hidden = false;
     elWho.innerHTML =
       '<span>' + esc(user.name || user.email) + ' · <span class="adm-pill blue">' +
-      esc(user.role) + '</span></span>' +
+      esc(A.roleLabel(user.role)) + '</span></span>' +
       '<button class="adm-btn small secondary" id="signOutBtn" ' +
       'style="border-color:rgba(255,255,255,0.5);color:#fff;">Sign Out</button>';
     document.getElementById('signOutBtn').addEventListener('click', function () {
@@ -154,10 +173,12 @@
     if (elMenuCurrent) elMenuCurrent.textContent = routeLabel(current);
     elMenu.innerHTML = MENU.map(function (group) {
       var links = group.items.map(function (item) {
-        var allowed = A.hasRole(item.role);
+        var ok = allowed(item);
         return '<a href="#/' + item.route + '"' +
-          ' class="' + (item.route === current ? 'active ' : '') + (allowed ? '' : 'disabled') + '"' +
-          (allowed ? '' : ' title="Requires the ' + item.role + ' role" aria-disabled="true"') +
+          ' class="' + (item.route === current ? 'active ' : '') + (ok ? '' : 'disabled') + '"' +
+          (ok ? '' : ' title="' + (item.cap
+            ? 'Not available to your role'
+            : 'Requires the ' + item.role + ' role') + '" aria-disabled="true"') +
           '>' + esc(item.label) + '</a>';
       }).join('');
       return '<div class="adm-menu-group"><div class="adm-menu-title">' +
@@ -176,21 +197,32 @@
     setMenuOpen(false);
     var name = currentRoute();
     var view = VIEWS[name];
+    var param = '';
+    /* Routes may carry one trailing id, e.g. #/newsletter/compose/NLT-0007. */
+    if (!view) {
+      var cut = name.lastIndexOf('/');
+      if (cut > 0 && VIEWS[name.slice(0, cut)]) {
+        param = decodeURIComponent(name.slice(cut + 1));
+        name = name.slice(0, cut);
+        view = VIEWS[name];
+      }
+    }
     renderMenu();
     if (!view) {
       elView.innerHTML = panel('Page not found',
         'That admin screen does not exist. Pick something from the menu.');
       return;
     }
-    var needed = ROUTE_ROLE[name];
-    if (needed && !A.hasRole(needed)) {
+    var neededCap = ROUTE_CAP[name];
+    var neededRole = ROUTE_ROLE[name];
+    if ((neededCap && !A.can(neededCap)) || (neededRole && !A.hasRole(neededRole))) {
       elView.innerHTML = panel('Not available to your role',
-        'This screen needs the <strong>' + esc(needed) + '</strong> role. ' +
-        'Ask an administrator to change your role if you need access.');
+        'Your role (<strong>' + esc(A.roleLabel(A.getUser().role)) + '</strong>) does not ' +
+        'have access to this screen. Ask an administrator if you need it.');
       return;
     }
     window.scrollTo(0, 0);
-    view();
+    view(param);
   }
 
   /* ── Small render helpers ────────────────────────────────────────────── */
@@ -294,16 +326,8 @@
   function viewDashboard() {
     var user = A.getUser();
     var sunday = A.lastSunday();
-    elView.innerHTML = panel(
-      'Welcome, ' + esc((user.name || user.email).split(' ')[0]),
-      'This is the WynLife Church management console. Everything you record here ' +
-      'is written straight into the <strong>Wynlife Management App Data Sheet</strong> ' +
-      'on Google Drive.',
-      '<div class="adm-stats">' +
-        '<div class="adm-stat"><div class="v" style="font-size:1.25rem;">' +
-          esc(A.prettyDate(sunday)) + '</div><div class="k">Most recent Sunday</div></div>' +
-        '<div class="adm-stat"><div class="v">' + esc(user.role) + '</div><div class="k">Your role</div></div>' +
-      '</div>' +
+
+    var sundayWalkthrough =
       '<h3 style="font-family:\'Merriweather\',serif;color:var(--navy);font-size:1.1rem;margin:8px 0 10px;">' +
       'A normal Sunday</h3>' +
       '<ol style="color:var(--gray);line-height:1.9;font-size:0.95rem;padding-left:22px;max-width:620px;">' +
@@ -313,7 +337,35 @@
         '<li>Parents sign their children in and out at <code>' + esc(A.checkinPath) + '</code>.</li>' +
         '<li><a href="#/reports/attendance">Attendance Report</a> and ' +
           '<a href="#/reports/sunday-school">Sunday School Report</a> — export the week.</li>' +
-      '</ol>');
+      '</ol>';
+
+    var newsletterWalkthrough =
+      '<h3 style="font-family:\'Merriweather\',serif;color:var(--navy);font-size:1.1rem;margin:8px 0 10px;">' +
+      'A normal newsletter</h3>' +
+      '<ol style="color:var(--gray);line-height:1.9;font-size:0.95rem;padding-left:22px;max-width:620px;">' +
+        '<li><a href="#/newsletter/compose">Compose Newsletter</a> — pick a design, then fill in ' +
+          'this week’s sermon and announcements. Giving, Child Safety, the header and the ' +
+          'footer come pre-filled.</li>' +
+        '<li>Watch the preview on the right as you type, and send yourself a test.</li>' +
+        '<li>Send it to the list. Every copy goes out individually with its own ' +
+          'unsubscribe link.</li>' +
+        '<li><a href="#/newsletter">Newsletter History</a> — every issue is kept, so you can ' +
+          'reopen last week’s and start from it.</li>' +
+      '</ol>';
+
+    elView.innerHTML = panel(
+      'Welcome, ' + esc((user.name || user.email).split(' ')[0]),
+      'This is the WynLife Church management console. Everything you record here ' +
+      'is written straight into the <strong>Wynlife Management App Data Sheet</strong> ' +
+      'on Google Drive.',
+      '<div class="adm-stats">' +
+        '<div class="adm-stat"><div class="v" style="font-size:1.25rem;">' +
+          esc(A.prettyDate(sunday)) + '</div><div class="k">Most recent Sunday</div></div>' +
+        '<div class="adm-stat"><div class="v" style="font-size:1.25rem;">' +
+          esc(A.roleLabel(user.role)) + '</div><div class="k">Your role</div></div>' +
+      '</div>' +
+      (A.hasRole('basic') ? sundayWalkthrough : '') +
+      (A.can('newsletter') ? newsletterWalkthrough : ''));
   }
 
   /* ── Manage: Add New User ────────────────────────────────────────────── */
@@ -322,7 +374,9 @@
     elView.innerHTML = panel('Add New User',
       'Create a login for the admin console. <strong>Basic</strong> can view reports, ' +
       '<strong>Planner</strong> can also manage members and record attendance, ' +
-      '<strong>Admin</strong> can do everything including managing users.',
+      '<strong>Admin</strong> can do everything including managing users. ' +
+      '<strong>Email Administrator</strong> sits on its own: it can compose and send the ' +
+      'newsletter and nothing else — no members, no attendance, no reports.',
       '<div class="adm-msg" id="userMsg"></div>' +
       '<form class="adm-form" id="addUserForm">' +
         '<div class="adm-grid-2">' +
@@ -337,6 +391,7 @@
               '<option value="basic">Basic — reports only</option>' +
               '<option value="planner">Planner — members &amp; attendance</option>' +
               '<option value="admin">Admin — full access</option>' +
+              '<option value="email">Email Administrator — newsletter only</option>' +
             '</select>') +
         '</div>' +
         '<div class="adm-actions">' +
@@ -376,7 +431,7 @@
       return '<tr>' +
         '<td>' + esc(user.email) + '</td>' +
         '<td>' + esc(user.name) + '</td>' +
-        '<td><span class="adm-pill blue">' + esc(user.role) + '</span></td>' +
+        '<td><span class="adm-pill blue">' + esc(A.roleLabel(user.role)) + '</span></td>' +
         '<td>' + (user.active
           ? '<span class="adm-pill green">Active</span>'
           : '<span class="adm-pill grey">Disabled</span>') + '</td>' +
@@ -418,9 +473,10 @@
           '<div class="adm-grid-2">' +
             field('Role',
               '<select id="euRole">' +
-                ['basic', 'planner', 'admin'].map(function (role) {
+                ['basic', 'planner', 'admin', 'email'].map(function (role) {
                   return '<option value="' + role + '"' +
-                    (role === user.role ? ' selected' : '') + '>' + role + '</option>';
+                    (role === user.role ? ' selected' : '') + '>' +
+                    esc(A.roleLabel(role)) + '</option>';
                 }).join('') +
               '</select>') +
             field('New password',
@@ -1164,6 +1220,889 @@
         '</tr>';
       }).join('') +
       '</tbody></table></div>';
+  }
+
+  /* ══ Newsletter ═══════════════════════════════════════════════════════
+     The Email Administrator's corner of the console: compose an issue from
+     this week's words and pictures, watch it build in the preview, then send
+     it to the Newsletter Recipients list through Brevo.                   */
+
+  var W = window.WynNewsletter;
+
+  /* The issue being edited, and the row it belongs to once it has been
+     saved. Both live here so a preview refresh does not have to re-read the
+     form, and so leaving the screen and coming back starts clean.        */
+  var nlDraft = null;
+  var nlId = '';
+  var nlPreviewTimer = null;
+
+  /* ── Reading and writing the draft by path ── */
+
+  function nlGet(path) {
+    var node = nlDraft;
+    var parts = String(path).split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (node === null || node === undefined) return '';
+      node = node[parts[i]];
+    }
+    return node === null || node === undefined ? '' : node;
+  }
+
+  function nlSet(path, value) {
+    var parts = String(path).split('.');
+    var node = nlDraft;
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (node[parts[i]] === null || node[parts[i]] === undefined) {
+        node[parts[i]] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+      }
+      node = node[parts[i]];
+    }
+    node[parts[parts.length - 1]] = value;
+  }
+
+  /* ── Form pieces, all bound by their data-nl path ── */
+
+  function nlText(label, path, hint, placeholder) {
+    return field(esc(label),
+      '<input type="text" data-nl="' + path + '" value="' + esc(nlGet(path)) + '"' +
+      (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '') + '>',
+      hint ? esc(hint) : '');
+  }
+
+  function nlArea(label, path, hint, rows) {
+    return field(esc(label),
+      '<textarea data-nl="' + path + '" rows="' + (rows || 5) + '">' +
+      esc(nlGet(path)) + '</textarea>',
+      hint ? esc(hint) : '');
+  }
+
+  function nlCheck(path, label) {
+    return '<label class="adm-check"><input type="checkbox" data-nl="' + path + '"' +
+      (nlGet(path) === false ? '' : ' checked') + '> <span>' + esc(label) + '</span></label>';
+  }
+
+  /** A picture: paste a link, or upload one and we host it for you. */
+  function nlImage(label, path, hint) {
+    var url = nlGet(path);
+    return '<div class="adm-field nl-image">' +
+      '<label>' + esc(label) + '</label>' +
+      '<input type="text" data-nl="' + path + '" data-nl-url value="' + esc(url) + '" ' +
+      'placeholder="https://…">' +
+      '<div class="nl-image-row">' +
+        '<label class="adm-btn small secondary nl-upload">Upload a picture' +
+          '<input type="file" accept="image/*" data-nl-upload="' + path + '" hidden>' +
+        '</label>' +
+        '<span class="adm-hint" data-nl-upload-msg="' + path + '"></span>' +
+      '</div>' +
+      '<div class="nl-thumb"><img data-nl-thumb="' + path + '" src="' + esc(url) + '" alt=""' +
+        (url ? '' : ' hidden') + '></div>' +
+      (hint ? '<div class="adm-hint">' + esc(hint) + '</div>' : '') +
+    '</div>';
+  }
+
+  /** Fixed rows of "label / value" — Food Bank dates, giving account details. */
+  function nlRows(label, path, count, hint) {
+    var list = nlGet(path) || [];
+    var out = '<div class="adm-field"><label>' + esc(label) + '</label>';
+    for (var i = 0; i < count; i++) {
+      var item = list[i] || {};
+      out += '<div class="nl-kv">' +
+        '<input type="text" data-nl="' + path + '.' + i + '.k" placeholder="Label" value="' +
+          esc(item.k || '') + '">' +
+        '<input type="text" data-nl="' + path + '.' + i + '.v" placeholder="Value" value="' +
+          esc(item.v || '') + '">' +
+      '</div>';
+    }
+    out += (hint ? '<div class="adm-hint">' + esc(hint) + '</div>' : '') + '</div>';
+    return out;
+  }
+
+  function nlSection(number, title, sub, bodyHtml, open) {
+    return '<details class="nl-section"' + (open ? ' open' : '') + '>' +
+      '<summary><span class="nl-num">' + esc(number) + '</span>' +
+      '<span class="nl-title">' + esc(title) + '</span>' +
+      '<span class="nl-sub">' + esc(sub) + '</span></summary>' +
+      '<div class="nl-section-body">' + bodyHtml + '</div>' +
+    '</details>';
+  }
+
+  /* ── Compose ── */
+
+  function viewNewsletterCompose(newsletterId) {
+    if (newsletterId) {
+      loading('Opening newsletter…');
+      A.call('nlGet', { newsletterId: newsletterId }).then(function (data) {
+        nlDraft = W.normalise(data.newsletter.content);
+        /* A sent issue is the starting point for a new one, never edited in
+           place — otherwise last week's record would quietly change. */
+        if (data.newsletter.status === 'sent') {
+          nlId = '';
+          nlDraft.subject = '';
+          nlDraft.issueDate = A.isoDate(new Date());
+        } else {
+          nlId = data.newsletter.newsletterId;
+        }
+        renderCompose(data.newsletter.status === 'sent'
+          ? 'Started from ' + data.newsletter.subject + '. Save it to create a new draft.'
+          : '');
+      }).catch(fail);
+      return;
+    }
+    if (!nlDraft) {
+      nlDraft = W.blank();
+      nlDraft.issueDate = A.isoDate(new Date());
+      nlId = '';
+    }
+    renderCompose('');
+  }
+
+  function renderCompose(message) {
+    var designs = W.DESIGNS.map(function (d) {
+      return '<option value="' + d.id + '"' + (d.id === nlDraft.design ? ' selected' : '') +
+        '>' + esc(d.label) + ' — ' + esc(d.note) + '</option>';
+    }).join('');
+
+    var announcements = nlDraft.announcements.map(function (item, i) {
+      return nlSection('Section ' + (i + 2), 'Announcement #' + (i + 1),
+        item.title || item.label || 'nothing yet',
+        nlCheck('announcements.' + i + '.enabled', 'Include this announcement') +
+        '<div class="adm-grid-2">' +
+          nlText('Kicker', 'announcements.' + i + '.label', 'Small label above the heading.',
+                 'e.g. Gatherings') +
+          nlText('Heading', 'announcements.' + i + '.title', '', 'e.g. Fellowship Lunch') +
+        '</div>' +
+        nlArea('Text', 'announcements.' + i + '.body',
+               'Leave a blank line between paragraphs.') +
+        nlImage('Picture', 'announcements.' + i + '.imageUrl') +
+        nlText('Picture description', 'announcements.' + i + '.imageAlt',
+               'Shown when pictures are blocked. Worth filling in.') +
+        nlRows('Details', 'announcements.' + i + '.details', 6,
+               'Optional. Dates, times, address — anything that reads better as a list.') +
+        '<div class="adm-grid-2">' +
+          nlText('Quote', 'announcements.' + i + '.quote', '', 'A verse, if you want one') +
+          nlText('Quote reference', 'announcements.' + i + '.quoteRef', '', 'e.g. 1 Thess. 5:16') +
+        '</div>' +
+        '<div class="adm-grid-2">' +
+          nlText('Link text', 'announcements.' + i + '.linkLabel', '', 'e.g. Find a group') +
+          nlText('Link address', 'announcements.' + i + '.linkUrl', '', 'https://…') +
+        '</div>',
+        i < 3);
+    }).join('');
+
+    elView.innerHTML =
+      '<div class="adm-panel">' +
+        '<div class="adm-panel-head">' +
+          '<div><h2>Compose Newsletter</h2>' +
+          '<p class="adm-sub">Pick a design, write this week’s words, drop in the pictures. ' +
+          'Giving, Child Safety, the header and the footer are already filled in — they say ' +
+          'the same thing every week.</p></div>' +
+        '</div>' +
+        '<div class="adm-msg" id="nlMsg"></div>' +
+        '<div class="nl-compose">' +
+
+          '<div class="nl-editor" id="nlEditor">' +
+            '<div class="adm-form" style="max-width:none;">' +
+              field('Design', '<select data-nl="design" id="nlDesign">' + designs + '</select>') +
+              '<div class="adm-grid-2">' +
+                nlText('Subject line', 'subject',
+                       'What people see in their inbox.') +
+                field('Issue date',
+                  '<input type="date" data-nl="issueDate" value="' +
+                  esc(nlDraft.issueDate) + '">') +
+              '</div>' +
+              nlText('Preview text', 'preheader',
+                     'The grey line of text after the subject in most inboxes.') +
+            '</div>' +
+
+            nlSection('Header', 'Masthead & service times', 'the same every week',
+              nlImage('Banner', 'header.bannerUrl') +
+              nlImage('Logo for the Editorial design', 'header.logoDarkUrl',
+                      'The navy logo used on the pale paper design.') +
+              nlArea('Corner text', 'header.kicker', 'One line per row.', 2) +
+              [0, 1].map(function (i) {
+                return '<div class="adm-grid-2">' +
+                  nlText('Time ' + (i + 1) + ' label', 'header.times.' + i + '.label') +
+                  nlText('Time ' + (i + 1) + ' value', 'header.times.' + i + '.value') +
+                '</div>' +
+                nlText('Time ' + (i + 1) + ' place', 'header.times.' + i + '.detail');
+              }).join(''), false) +
+
+            nlSection('Section 1', 'Upcoming Sermon', nlDraft.sermon.title || 'nothing yet',
+              '<div class="adm-grid-2">' +
+                nlText('Kicker', 'sermon.kicker', '', 'e.g. This Sunday · 10:00 AM') +
+                nlText('Passage', 'sermon.reference', '', 'e.g. Joshua 1:1-9') +
+              '</div>' +
+              nlText('Sermon title', 'sermon.title') +
+              nlArea('Sermon summary', 'sermon.body',
+                     'Leave a blank line between paragraphs.', 7) +
+              nlImage('Sermon picture', 'sermon.imageUrl') +
+              nlText('Picture description', 'sermon.imageAlt') +
+              nlText('Contents label', 'sermon.contentsLabel',
+                     'How this appears in the Editorial design’s contents list.'),
+              true) +
+
+            announcements +
+
+            nlSection('Section 7', 'Giving', 'the same every week',
+              nlCheck('giving.enabled', 'Include the giving section') +
+              '<div class="adm-grid-2">' +
+                nlText('Kicker', 'giving.label') +
+                nlText('Heading', 'giving.title',
+                       'Used by the Editorial design.') +
+              '</div>' +
+              nlArea('Text', 'giving.intro', '', 4) +
+              nlRows('Account details', 'giving.rows', 5) +
+              nlArea('Small print', 'giving.note', '', 3) +
+              nlImage('Picture', 'giving.imageUrl'), false) +
+
+            nlSection('Section 8', 'Child Safety', 'the same every week',
+              nlCheck('childSafe.enabled', 'Include the child safety section') +
+              nlText('Kicker', 'childSafe.label') +
+              nlArea('Text', 'childSafe.body', '', 4) +
+              nlImage('Picture 1', 'childSafe.images.0.url') +
+              nlText('Picture 1 description', 'childSafe.images.0.alt') +
+              nlImage('Picture 2', 'childSafe.images.1.url') +
+              nlText('Picture 2 description', 'childSafe.images.1.alt'), false) +
+
+            nlSection('Footer', 'Sign-off & contact details', 'the same every week',
+              nlImage('Closing picture', 'footer.closingImageUrl') +
+              nlArea('Closing heading', 'footer.closingTitle', 'One line per row.', 2) +
+              nlText('Closing text', 'footer.closingText') +
+              '<div class="adm-grid-2">' +
+                nlText('Button text', 'footer.ctaLabel') +
+                nlText('Button address', 'footer.ctaUrl') +
+              '</div>' +
+              nlImage('Footer logo', 'footer.logoUrl') +
+              nlText('Church name', 'footer.orgName') +
+              nlArea('Address & contact', 'footer.address', 'One line per row.', 3) +
+              [0, 1, 2, 3].map(function (i) {
+                return '<div class="adm-grid-2">' +
+                  nlText('Link ' + (i + 1) + ' text', 'footer.links.' + i + '.label') +
+                  nlText('Link ' + (i + 1) + ' address', 'footer.links.' + i + '.url') +
+                '</div>';
+              }).join('') +
+              nlText('Sign-off line', 'footer.legal',
+                     'The unsubscribe link is added after this automatically.'), false) +
+          '</div>' +
+
+          '<div class="nl-preview">' +
+            '<div class="nl-preview-head">' +
+              '<strong>Preview</strong>' +
+              '<span class="nl-widths">' +
+                '<button type="button" class="adm-btn small secondary is-on" data-nl-width="desktop">Desktop</button>' +
+                '<button type="button" class="adm-btn small secondary" data-nl-width="mobile">Phone</button>' +
+              '</span>' +
+            '</div>' +
+            '<div class="nl-preview-frame">' +
+              '<iframe id="nlFrame" title="Newsletter preview"></iframe>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="nl-actions">' +
+          '<button class="adm-btn" type="button" id="nlSave">Save Draft</button>' +
+          '<button class="adm-btn secondary" type="button" id="nlTestOpen">Send a Test</button>' +
+          '<button class="adm-btn secondary" type="button" id="nlSendOpen">Send to the List</button>' +
+          '<button class="adm-btn secondary" type="button" id="nlDownload">Download HTML</button>' +
+          '<a class="adm-btn secondary" href="#/newsletter">History</a>' +
+          '<span class="adm-hint" id="nlSavedAs">' +
+            (nlId ? 'Draft ' + esc(nlId) : 'Not saved yet') + '</span>' +
+        '</div>' +
+        '<div id="nlSendSlot"></div>' +
+      '</div>';
+
+    bindCompose();
+    refreshPreview();
+    if (message) msg('nlMsg', message, 'info');
+  }
+
+  function bindCompose() {
+    var editor = document.getElementById('nlEditor');
+
+    /* Text as it is typed; tick boxes and dropdowns are handled on change. */
+    editor.addEventListener('input', function (e) {
+      var path = e.target.getAttribute('data-nl');
+      if (!path || e.target.type === 'checkbox' || e.target.tagName === 'SELECT') return;
+      nlSet(path, e.target.value);
+      if (e.target.hasAttribute('data-nl-url')) syncThumb(path, e.target.value);
+      schedulePreview();
+    });
+
+    editor.addEventListener('change', function (e) {
+      var path = e.target.getAttribute('data-nl');
+      if (path && e.target.type === 'checkbox') {
+        nlSet(path, e.target.checked);
+        schedulePreview();
+        return;
+      }
+      if (path && e.target.tagName === 'SELECT') {
+        nlSet(path, e.target.value);
+        schedulePreview();
+        return;
+      }
+      var uploadPath = e.target.getAttribute('data-nl-upload');
+      if (uploadPath && e.target.files && e.target.files[0]) {
+        uploadImage(uploadPath, e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+
+    elView.querySelectorAll('[data-nl-width]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        elView.querySelectorAll('[data-nl-width]').forEach(function (other) {
+          other.classList.toggle('is-on', other === btn);
+        });
+        document.querySelector('.nl-preview')
+          .classList.toggle('is-mobile', btn.getAttribute('data-nl-width') === 'mobile');
+      });
+    });
+
+    on('nlSave', 'click', function () {
+      busy('nlSave', true, 'Saving…');
+      saveDraft().then(function (data) {
+        msg('nlMsg', data.message, 'ok');
+      }).catch(function (err) {
+        msg('nlMsg', err.message, 'error');
+      }).then(function () { busy('nlSave', false); });
+    });
+
+    on('nlTestOpen', 'click', renderTestPanel);
+    on('nlSendOpen', 'click', renderSendPanel);
+    on('nlDownload', 'click', function () {
+      var name = 'wynlife-newsletter-' + (nlDraft.issueDate || 'draft') + '-' +
+                 nlDraft.design + '.html';
+      var blob = new Blob([W.render(nlDraft)], { type: 'text/html;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
+  }
+
+  function syncThumb(path, url) {
+    var thumb = elView.querySelector('[data-nl-thumb="' + path + '"]');
+    if (!thumb) return;
+    thumb.src = url || '';
+    thumb.hidden = !url;
+  }
+
+  function uploadImage(path, file) {
+    var note = elView.querySelector('[data-nl-upload-msg="' + path + '"]');
+    if (note) note.textContent = 'Uploading ' + file.name + '…';
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      /* data:image/png;base64,AAAA… — Apps Script wants only the tail. */
+      var base64 = String(reader.result).split(',')[1] || '';
+      A.call('nlUploadImage', {
+        name: file.name,
+        mimeType: file.type || 'image/png',
+        dataBase64: base64
+      }).then(function (data) {
+        nlSet(path, data.url);
+        var input = elView.querySelector('[data-nl="' + path + '"]');
+        if (input) input.value = data.url;
+        syncThumb(path, data.url);
+        if (note) note.textContent = 'Uploaded.';
+        schedulePreview();
+      }).catch(function (err) {
+        if (note) note.textContent = err.message;
+      });
+    };
+    reader.onerror = function () {
+      if (note) note.textContent = 'That file could not be read.';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function schedulePreview() {
+    clearTimeout(nlPreviewTimer);
+    nlPreviewTimer = setTimeout(refreshPreview, 250);
+  }
+
+  function refreshPreview() {
+    var frame = document.getElementById('nlFrame');
+    if (!frame) return;
+    frame.srcdoc = W.preview(nlDraft);
+  }
+
+  function saveDraft() {
+    return A.call('nlSave', {
+      newsletterId: nlId,
+      content: nlDraft
+    }).then(function (data) {
+      nlId = data.newsletterId;
+      var badge = document.getElementById('nlSavedAs');
+      if (badge) badge.textContent = 'Draft ' + nlId;
+      return data;
+    });
+  }
+
+  /* ── Test send ── */
+
+  function renderTestPanel() {
+    var user = A.getUser();
+    document.getElementById('nlSendSlot').innerHTML =
+      '<div class="adm-panel nl-confirm">' +
+        '<h2 style="font-size:1.1rem;">Send a test</h2>' +
+        '<p class="adm-sub">The real email, to you. Up to five addresses, separated by commas. ' +
+        'The subject is prefixed with <code>[TEST]</code> and the unsubscribe link is inert.</p>' +
+        '<div class="adm-msg" id="nlTestMsg"></div>' +
+        '<div class="adm-form">' +
+          field('Send the test to',
+            '<input type="text" id="nlTestTo" value="' + esc(user.email) + '">') +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="button" id="nlTestGo">Send Test</button>' +
+            '<button class="adm-btn secondary" type="button" id="nlTestCancel">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    on('nlTestCancel', 'click', function () {
+      document.getElementById('nlSendSlot').innerHTML = '';
+    });
+
+    on('nlTestGo', 'click', function () {
+      if (!String(nlDraft.subject || '').trim()) {
+        msg('nlTestMsg', 'Give the newsletter a subject line first.', 'error');
+        return;
+      }
+      busy('nlTestGo', true, 'Sending…');
+      saveDraft().then(function () {
+        return A.call('nlSendTest', {
+          newsletterId: nlId,
+          issueDate: nlDraft.issueDate,
+          subject: nlDraft.subject,
+          html: W.render(nlDraft),
+          text: W.plainText(nlDraft),
+          emails: val('nlTestTo')
+        });
+      }).then(function (data) {
+        msg('nlTestMsg', data.message + (data.errors && data.errors.length
+          ? ' ' + data.errors.join(' ') : ''), data.failed ? 'error' : 'ok');
+      }).catch(function (err) {
+        msg('nlTestMsg', err.message, 'error');
+      }).then(function () { busy('nlTestGo', false); });
+    });
+  }
+
+  /* ── The real send ── */
+
+  function renderSendPanel() {
+    document.getElementById('nlSendSlot').innerHTML =
+      '<div class="adm-panel nl-confirm"><p class="adm-sub" style="margin:0;">Loading the list…</p></div>';
+
+    A.call('nlRecipients').then(function (data) {
+      var subscribed = data.recipients.filter(function (r) { return r.status === 'subscribed'; });
+      var groupOptions = '<option value="">Everyone who is subscribed (' +
+        subscribed.length + ')</option>' +
+        data.groups.map(function (g) {
+          var count = subscribed.filter(function (r) {
+            return r.groups.split(',').map(function (x) { return x.trim(); }).indexOf(g) !== -1;
+          }).length;
+          return '<option value="' + esc(g) + '">' + esc(g) + ' (' + count + ')</option>';
+        }).join('');
+
+      document.getElementById('nlSendSlot').innerHTML =
+        '<div class="adm-panel nl-confirm">' +
+          '<h2 style="font-size:1.1rem;">Send to the list</h2>' +
+          '<p class="adm-sub">Each person gets their own copy with their own unsubscribe ' +
+          'link — nobody sees anyone else’s address. Send yourself a test first if you ' +
+          'have not already.</p>' +
+          '<div class="adm-msg" id="nlSendMsg"></div>' +
+          '<div class="adm-form">' +
+            field('Send to', '<select id="nlSendGroup">' + groupOptions + '</select>') +
+            '<div class="adm-actions">' +
+              '<button class="adm-btn" type="button" id="nlSendGo">Send Now</button>' +
+              '<button class="adm-btn secondary" type="button" id="nlSendCancel">Cancel</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      on('nlSendCancel', 'click', function () {
+        document.getElementById('nlSendSlot').innerHTML = '';
+      });
+      on('nlSendGo', 'click', startSend);
+    }).catch(function (err) {
+      document.getElementById('nlSendSlot').innerHTML =
+        '<div class="adm-panel nl-confirm"><div class="adm-msg error">' +
+        esc(err.message) + '</div></div>';
+    });
+  }
+
+  function startSend() {
+    if (!String(nlDraft.subject || '').trim()) {
+      msg('nlSendMsg', 'Give the newsletter a subject line first.', 'error');
+      return;
+    }
+    var group = val('nlSendGroup');
+    busy('nlSendGo', true, 'Sending…');
+    document.getElementById('nlSendCancel').disabled = true;
+
+    var html = W.render(nlDraft);
+    var text = W.plainText(nlDraft);
+    var totals = { sent: 0, failed: 0, errors: [] };
+
+    function chunk(offset) {
+      return A.call('nlSend', {
+        newsletterId: nlId,
+        issueDate: nlDraft.issueDate,
+        subject: nlDraft.subject,
+        html: html,
+        text: text,
+        group: group,
+        offset: offset
+      }).then(function (data) {
+        totals.sent += data.sent;
+        totals.failed += data.failed;
+        totals.errors = totals.errors.concat(data.errors || []);
+        msgHtml('nlSendMsg', 'Sent ' + totals.sent + ' of ' + data.total + '…', 'info');
+        if (!data.done) return chunk(data.nextOffset);
+        return data;
+      });
+    }
+
+    saveDraft()
+      .then(function () { return chunk(0); })
+      .then(function () {
+        msgHtml('nlSendMsg',
+          '<strong>Newsletter sent.</strong> ' + totals.sent + ' delivered' +
+          (totals.failed ? ', ' + totals.failed + ' failed' : '') + '.' +
+          (totals.errors.length
+            ? '<br>' + totals.errors.map(esc).join('<br>')
+            : ''),
+          totals.failed ? 'error' : 'ok');
+        /* Let go of the sent issue: anything typed from here on belongs to a
+           new draft, not to the record of what people already received. */
+        nlId = '';
+        var badge = document.getElementById('nlSavedAs');
+        if (badge) badge.textContent = 'Sent — further edits start a new draft';
+        msg('nlMsg', 'This issue is now in the history.', 'ok');
+      })
+      .catch(function (err) {
+        msgHtml('nlSendMsg', esc(err.message) +
+          (totals.sent ? '<br>' + totals.sent + ' had already gone out before this happened.' : ''),
+          'error');
+      })
+      .then(function () {
+        busy('nlSendGo', false);
+        var cancel = document.getElementById('nlSendCancel');
+        if (cancel) cancel.disabled = false;
+      });
+  }
+
+  /* ── History ── */
+
+  function viewNewsletterHistory() {
+    loading('Loading newsletters…');
+    A.call('nlList').then(function (data) {
+      var rows = data.newsletters.map(function (item) {
+        var pill = item.status === 'sent' ? 'green' : (item.status === 'sending' ? 'gold' : 'grey');
+        return '<tr>' +
+          '<td>' + esc(A.prettyDate(item.issueDate) || item.issueDate) + '</td>' +
+          '<td><strong>' + esc(item.subject || '(no subject)') + '</strong>' +
+            (item.sections ? '<div class="adm-hint">' + esc(item.sections) + '</div>' : '') + '</td>' +
+          '<td>' + esc(item.design) + '</td>' +
+          '<td><span class="adm-pill ' + pill + '">' + esc(item.status) + '</span></td>' +
+          '<td class="num">' + (item.status === 'draft' ? '—' :
+            esc(item.sentCount + (item.failedCount ? ' / ' + item.failedCount + ' failed' : ''))) + '</td>' +
+          '<td>' + esc(item.createdBy) + '<div class="adm-hint">' +
+            esc((item.createdAt || '').replace('T', ' ')) + '</div></td>' +
+          '<td><a class="adm-btn small secondary" href="#/newsletter/compose/' +
+            encodeURIComponent(item.newsletterId) + '">' +
+            (item.status === 'sent' ? 'Copy' : 'Edit') + '</a>' +
+            (item.status === 'sent' ? '' :
+              ' <button class="adm-btn small secondary" data-nl-del="' +
+              esc(item.newsletterId) + '">Delete</button>') +
+          '</td>' +
+        '</tr>';
+      }).join('');
+
+      elView.innerHTML = panel('Newsletter History',
+        'Every issue is kept here, along with who composed it and which sections it used. ' +
+        'Open a sent issue to start this week’s from it.',
+        '<div class="adm-msg" id="nlHistMsg"></div>' +
+        '<div class="adm-actions" style="margin-bottom:18px;">' +
+          '<a class="adm-btn" href="#/newsletter/compose">Compose a New Newsletter</a>' +
+        '</div>' +
+        '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
+          '<th>Issue date</th><th>Subject</th><th>Design</th><th>Status</th>' +
+          '<th class="num">Sent</th><th>Created by</th><th></th>' +
+        '</tr></thead><tbody>' +
+        (rows || '<tr><td colspan="7">No newsletters yet.</td></tr>') +
+        '</tbody></table></div>');
+
+      elView.querySelectorAll('[data-nl-del]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          btn.disabled = true;
+          A.call('nlDelete', { newsletterId: btn.getAttribute('data-nl-del') })
+            .then(viewNewsletterHistory)
+            .catch(function (err) {
+              btn.disabled = false;
+              msg('nlHistMsg', err.message, 'error');
+            });
+        });
+      });
+    }).catch(fail);
+  }
+
+  /* ── Recipients ── */
+
+  function viewNewsletterRecipients() {
+    loading('Loading the mailing list…');
+    A.call('nlRecipients').then(function (data) {
+      renderRecipients(data, '');
+    }).catch(fail);
+  }
+
+  function renderRecipients(data, query) {
+    var term = String(query || '').toLowerCase();
+    var shown = data.recipients.filter(function (r) {
+      if (!term) return true;
+      return (r.email + ' ' + r.firstName + ' ' + r.lastName + ' ' + r.groups)
+        .toLowerCase().indexOf(term) !== -1;
+    });
+    var subscribed = data.recipients.filter(function (r) { return r.status === 'subscribed'; }).length;
+    var gone = data.recipients.filter(function (r) { return r.status === 'unsubscribed'; }).length;
+
+    var rows = shown.map(function (r) {
+      var pill = r.status === 'subscribed' ? 'green' : (r.status === 'bounced' ? 'gold' : 'grey');
+      return '<tr>' +
+        '<td>' + esc(r.email) + '</td>' +
+        '<td>' + esc([r.firstName, r.lastName].filter(Boolean).join(' ') || '—') + '</td>' +
+        '<td>' + esc(r.groups || '—') + '</td>' +
+        '<td><span class="adm-pill ' + pill + '">' + esc(r.status) + '</span></td>' +
+        '<td>' + esc((r.lastSentAt || '').replace('T', ' ') || '—') + '</td>' +
+        '<td><button class="adm-btn small secondary" data-rcp="' + esc(r.recipientId) +
+          '">Edit</button></td>' +
+      '</tr>';
+    }).join('');
+
+    elView.innerHTML = panel('Newsletter Recipients',
+      'The <strong>Newsletter Recipients</strong> tab of the data sheet. People who use the ' +
+      'unsubscribe link in a newsletter move to <em>unsubscribed</em> here on their own, and ' +
+      'are skipped from then on.',
+      '<div class="adm-msg" id="rcpMsg"></div>' +
+      '<div class="adm-stats">' +
+        '<div class="adm-stat"><div class="v">' + subscribed + '</div><div class="k">Subscribed</div></div>' +
+        '<div class="adm-stat"><div class="v">' + gone + '</div><div class="k">Unsubscribed</div></div>' +
+        '<div class="adm-stat"><div class="v">' + data.recipients.length +
+          '</div><div class="k">On the list</div></div>' +
+      '</div>' +
+      '<div id="rcpEditSlot"></div>' +
+      '<div class="adm-toolbar">' +
+        '<div class="adm-field"><label>Search</label>' +
+          '<input type="search" id="rcpSearch" value="' + esc(query || '') +
+          '" placeholder="Name, email or group"></div>' +
+        '<button class="adm-btn" type="button" id="rcpAdd">Add Someone</button>' +
+        '<button class="adm-btn secondary" type="button" id="rcpImport">Import a List</button>' +
+        '<button class="adm-btn secondary" type="button" id="rcpExport">Export CSV</button>' +
+      '</div>' +
+      '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
+        '<th>Email</th><th>Name</th><th>Groups</th><th>Status</th><th>Last sent</th><th></th>' +
+      '</tr></thead><tbody>' +
+      (rows || '<tr><td colspan="6">Nobody on the list matches that.</td></tr>') +
+      '</tbody></table></div>');
+
+    on('rcpSearch', 'input', function (e) {
+      var box = e.target;
+      var caret = box.selectionStart;
+      renderRecipients(data, box.value);
+      var again = document.getElementById('rcpSearch');
+      again.focus();
+      again.setSelectionRange(caret, caret);
+    });
+
+    on('rcpAdd', 'click', function () { renderRecipientEditor(null, data); });
+    on('rcpImport', 'click', function () { renderRecipientImport(data); });
+    on('rcpExport', 'click', function () {
+      downloadCsv('wynlife-newsletter-recipients-' + A.isoDate(new Date()) + '.csv',
+        [['Email', 'First Name', 'Last Name', 'Status', 'Groups', 'Added At', 'Last Sent At']]
+          .concat(data.recipients.map(function (r) {
+            return [r.email, r.firstName, r.lastName, r.status, r.groups, r.addedAt, r.lastSentAt];
+          })));
+    });
+
+    elView.querySelectorAll('[data-rcp]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var target = data.recipients.filter(function (r) {
+          return r.recipientId === btn.getAttribute('data-rcp');
+        })[0];
+        if (target) renderRecipientEditor(target, data);
+      });
+    });
+  }
+
+  function renderRecipientEditor(recipient, data) {
+    var r = recipient || { recipientId: '', email: '', firstName: '', lastName: '',
+                           status: 'subscribed', groups: '', notes: '' };
+    document.getElementById('rcpEditSlot').innerHTML =
+      '<div class="adm-panel" style="background:var(--cream);margin-bottom:22px;">' +
+        '<h2 style="font-size:1.15rem;">' +
+        (recipient ? 'Editing ' + esc(r.email) : 'Add someone to the list') + '</h2>' +
+        '<form class="adm-form" id="rcpForm">' +
+          '<div class="adm-grid-2">' +
+            field('Email', '<input type="email" id="rcpEmail" value="' + esc(r.email) + '" required>') +
+            field('Status',
+              '<select id="rcpStatus">' + data.statuses.map(function (s) {
+                return '<option value="' + s + '"' + (s === r.status ? ' selected' : '') +
+                  '>' + s + '</option>';
+              }).join('') + '</select>') +
+          '</div>' +
+          '<div class="adm-grid-2">' +
+            field('First name', '<input type="text" id="rcpFirst" value="' + esc(r.firstName) + '">') +
+            field('Last name', '<input type="text" id="rcpLast" value="' + esc(r.lastName) + '">') +
+          '</div>' +
+          field('Groups', '<input type="text" id="rcpGroups" value="' + esc(r.groups) + '">',
+                'Separate with commas. Groups let you send an issue to part of the list.') +
+          field('Notes', '<input type="text" id="rcpNotes" value="' + esc(r.notes) + '">') +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="rcpSave">Save</button>' +
+            '<button class="adm-btn secondary" type="button" id="rcpCancel">Cancel</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+
+    on('rcpCancel', 'click', function () {
+      document.getElementById('rcpEditSlot').innerHTML = '';
+    });
+
+    on('rcpForm', 'submit', function (e) {
+      e.preventDefault();
+      busy('rcpSave', true, 'Saving…');
+      A.call('nlSaveRecipient', {
+        recipientId: r.recipientId,
+        email: val('rcpEmail'),
+        firstName: val('rcpFirst'),
+        lastName: val('rcpLast'),
+        status: val('rcpStatus'),
+        groups: val('rcpGroups'),
+        notes: val('rcpNotes')
+      }).then(function (result) {
+        viewNewsletterRecipients();
+        setTimeout(function () { msg('rcpMsg', result.message, 'ok'); }, 0);
+      }).catch(function (err) {
+        busy('rcpSave', false);
+        msg('rcpMsg', err.message, 'error');
+      });
+    });
+  }
+
+  function renderRecipientImport() {
+    document.getElementById('rcpEditSlot').innerHTML =
+      '<div class="adm-panel" style="background:var(--cream);margin-bottom:22px;">' +
+        '<h2 style="font-size:1.15rem;">Import a list</h2>' +
+        '<p class="adm-sub">One person per line. The email address is all that is required:<br>' +
+        '<code>someone@example.com, Jane, Smith, families</code><br>' +
+        'Addresses already on the list are updated rather than duplicated.</p>' +
+        '<form class="adm-form" id="rcpImportForm">' +
+          field('Paste the list', '<textarea id="rcpImportText" rows="10"></textarea>') +
+          field('Put everyone in these groups',
+            '<input type="text" id="rcpImportGroups" placeholder="Optional, comma separated">') +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="rcpImportSave">Import</button>' +
+            '<button class="adm-btn secondary" type="button" id="rcpImportCancel">Cancel</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+
+    on('rcpImportCancel', 'click', function () {
+      document.getElementById('rcpEditSlot').innerHTML = '';
+    });
+
+    on('rcpImportForm', 'submit', function (e) {
+      e.preventDefault();
+      busy('rcpImportSave', true, 'Importing…');
+      A.call('nlImportRecipients', {
+        text: document.getElementById('rcpImportText').value,
+        groups: val('rcpImportGroups')
+      }).then(function (result) {
+        var note = result.message + (result.skipped.length
+          ? ' Skipped: ' + result.skipped.slice(0, 5).join(', ') : '');
+        viewNewsletterRecipients();
+        setTimeout(function () {
+          msg('rcpMsg', note, result.skipped.length ? 'info' : 'ok');
+        }, 0);
+      }).catch(function (err) {
+        busy('rcpImportSave', false);
+        msg('rcpMsg', err.message, 'error');
+      });
+    });
+  }
+
+  /* ── Email settings ── */
+
+  function viewNewsletterSettings() {
+    loading('Loading email settings…');
+    A.call('nlSettings').then(function (data) {
+      var s = data.settings;
+      elView.innerHTML = panel('Email Settings',
+        'The newsletter goes out through <strong>Brevo</strong>. The API key is kept in the ' +
+        'Apps Script’s own properties, never in the spreadsheet, and is never shown back ' +
+        'here in full.',
+        '<div class="adm-msg" id="nlSetMsg"></div>' +
+        '<form class="adm-form" id="nlSetForm">' +
+          field('Brevo API key',
+            '<input type="password" id="nlApiKey" autocomplete="off" placeholder="' +
+            (s.apiKeySet ? 'Saved — leave blank to keep it' : 'xkeysib-…') + '">',
+            s.apiKeySet
+              ? 'A key is saved (' + esc(s.apiKeyHint) + '). Type a new one to replace it.'
+              : 'Brevo > SMTP &amp; API > API Keys. Paste the v3 key here.') +
+          '<div class="adm-grid-2">' +
+            field('Sender name',
+              '<input type="text" id="nlSenderName" value="' + esc(s.senderName) + '">') +
+            field('Sender address',
+              '<input type="email" id="nlSenderEmail" value="' + esc(s.senderEmail) + '">',
+              'Must be a verified sender in Brevo, or nothing will go out.') +
+          '</div>' +
+          field('Reply-to address',
+            '<input type="email" id="nlReplyTo" value="' + esc(s.replyTo) + '">') +
+          field('Unsubscribe link base',
+            '<input type="text" value="' + esc(s.unsubscribeUrl) + '" readonly>',
+            'Every newsletter footer points here. It is this Apps Script deployment.') +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="nlSetSave">Save Settings</button>' +
+            (s.apiKeySet
+              ? '<button class="adm-btn secondary" type="button" id="nlSetClear">Remove the Key</button>'
+              : '') +
+          '</div>' +
+        '</form>');
+
+      on('nlSetForm', 'submit', function (e) {
+        e.preventDefault();
+        busy('nlSetSave', true, 'Saving…');
+        A.call('nlSaveSettings', {
+          apiKey: document.getElementById('nlApiKey').value,
+          senderName: val('nlSenderName'),
+          senderEmail: val('nlSenderEmail'),
+          replyTo: val('nlReplyTo')
+        }).then(function (result) {
+          viewNewsletterSettings();
+          setTimeout(function () { msg('nlSetMsg', result.message, 'ok'); }, 0);
+        }).catch(function (err) {
+          busy('nlSetSave', false);
+          msg('nlSetMsg', err.message, 'error');
+        });
+      });
+
+      on('nlSetClear', 'click', function () {
+        busy('nlSetClear', true, 'Removing…');
+        A.call('nlSaveSettings', { clearApiKey: true }).then(function () {
+          viewNewsletterSettings();
+          setTimeout(function () {
+            msg('nlSetMsg', 'The Brevo key has been removed. No newsletters can go out ' +
+                'until a new one is saved.', 'info');
+          }, 0);
+        }).catch(function (err) {
+          busy('nlSetClear', false);
+          msg('nlSetMsg', err.message, 'error');
+        });
+      });
+    }).catch(fail);
   }
 
   start();

@@ -8,6 +8,12 @@
  *   Attendance Tracking Data — one row per member per Sunday service
  *   Sunday School Data       — sign in / sign out log for Sunday School kids
  *   App Users                — login accounts + roles for the admin site
+ *   Newsletter Recipients    — the email list the newsletter goes out to
+ *   Newsletter Issues        — how each week's newsletter was composed, and by whom
+ *   Newsletter Send Log      — one row per recipient per send
+ *
+ * The newsletter code lives in Newsletter.gs — paste that file into the same
+ * Apps Script project.
  *
  * Deployment: Deploy > New deployment > Web app
  *   Execute as:  Me
@@ -23,7 +29,10 @@ var SHEETS = {
   members:      'Member Data',
   attendance:   'Attendance Tracking Data',
   sundaySchool: 'Sunday School Data',
-  users:        'App Users'
+  users:        'App Users',
+  recipients:   'Newsletter Recipients',
+  newsletters:  'Newsletter Issues',
+  sendLog:      'Newsletter Send Log'
 };
 
 var HEADERS = {
@@ -45,6 +54,21 @@ var HEADERS = {
   users: [
     'User ID', 'Email', 'Display Name', 'Role', 'Salt', 'Password Hash',
     'Active', 'Created At', 'Last Login'
+  ],
+  recipients: [
+    'Recipient ID', 'Email', 'First Name', 'Last Name', 'Status', 'Groups',
+    'Source', 'Notes', 'Unsubscribe Token', 'Added By', 'Added At',
+    'Updated At', 'Last Sent At', 'Last Send Result'
+  ],
+  newsletters: [
+    'Newsletter ID', 'Issue Date', 'Subject', 'Preheader', 'Design', 'Status',
+    'Sections Used', 'Content JSON', 'Created By', 'Created At', 'Updated By',
+    'Updated At', 'Sent By', 'Sent At', 'Recipient Count', 'Sent Count',
+    'Failed Count', 'Last Test To'
+  ],
+  sendLog: [
+    'Log ID', 'Newsletter ID', 'Issue Date', 'Subject', 'Email', 'Kind',
+    'Result', 'Provider Message ID', 'Error', 'Sent By', 'Sent At'
   ]
 };
 
@@ -56,8 +80,21 @@ var BOOTSTRAP_ADMIN = {
   role: 'admin'
 };
 
-var ROLES = ['basic', 'planner', 'admin'];
-var ROLE_RANK = { basic: 1, planner: 2, admin: 3 };
+var ROLES = ['basic', 'planner', 'admin', 'email'];
+
+/* The first three roles stack: planner can do everything basic can, and so
+   on. "email" sits outside that ladder — an Email Administrator composes and
+   sends the newsletter and touches nothing else — so it ranks below basic and
+   earns its access through ROLE_CAPS instead. */
+var ROLE_RANK = { email: 0, basic: 1, planner: 2, admin: 3 };
+
+/* Capabilities that are not simply "rank at least X". */
+var ROLE_CAPS = {
+  basic:   [],
+  planner: [],
+  admin:   ['newsletter'],
+  email:   ['newsletter']
+};
 
 var SESSION_HOURS = 12;
 
@@ -103,6 +140,12 @@ function setup() {
   formatColumn_(SHEETS.members, 'Date of Birth', 'yyyy-mm-dd');
   formatColumn_(SHEETS.attendance, 'Service Date', 'yyyy-mm-dd');
   formatColumn_(SHEETS.sundaySchool, 'Service Date', 'yyyy-mm-dd');
+  formatColumn_(SHEETS.newsletters, 'Issue Date', 'yyyy-mm-dd');
+  formatColumn_(SHEETS.sendLog, 'Issue Date', 'yyyy-mm-dd');
+
+  /* The stored newsletter content is a long blob of JSON — auto-sizing would
+     stretch that column across the screen. */
+  narrowColumn_(SHEETS.newsletters, 'Content JSON', 260);
 
   /* Remove the default "Sheet1" if it is empty and unused. */
   var stray = ss.getSheetByName('Sheet1');
@@ -131,10 +174,24 @@ function formatColumn_(sheetName, headerName, format) {
   sheet.getRange(2, idx + 1, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat(format);
 }
 
+function narrowColumn_(sheetName, headerName, width) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return;
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var idx = headers.indexOf(headerName);
+  if (idx < 0) return;
+  sheet.setColumnWidth(idx + 1, width);
+}
+
 /* ─────────────────────────── HTTP entry points ─────────────────────────── */
 
 function doGet(e) {
   var params = (e && e.parameter) || {};
+
+  /* The unsubscribe link in every newsletter footer. It is a plain link in
+     someone's inbox, so it answers with a web page rather than JSON. */
+  if (params.action === 'nlUnsubscribe') return nlUnsubscribePage_(params);
+
   var body = {};
   if (params.payload) {
     try { body = JSON.parse(params.payload); } catch (err) { body = {}; }
@@ -198,6 +255,20 @@ function handle_(body) {
       /* Reports */
       case 'attendanceReport':   return apiAttendanceReport_(session, body);
       case 'sundaySchoolReport': return apiSundaySchoolReport_(session, body);
+
+      /* Newsletter — see Newsletter.gs */
+      case 'nlRecipients':       return apiNlRecipients_(session);
+      case 'nlSaveRecipient':    return apiNlSaveRecipient_(session, body);
+      case 'nlImportRecipients': return apiNlImportRecipients_(session, body);
+      case 'nlList':             return apiNlList_(session);
+      case 'nlGet':              return apiNlGet_(session, body);
+      case 'nlSave':             return apiNlSave_(session, body);
+      case 'nlDelete':           return apiNlDelete_(session, body);
+      case 'nlUploadImage':      return apiNlUploadImage_(session, body);
+      case 'nlSendTest':         return apiNlSendTest_(session, body);
+      case 'nlSend':             return apiNlSend_(session, body);
+      case 'nlSettings':         return apiNlSettings_(session);
+      case 'nlSaveSettings':     return apiNlSaveSettings_(session, body);
 
       default: return { ok: false, error: 'Unknown action: ' + action };
     }
@@ -413,6 +484,18 @@ function requireRole_(session, minRole) {
   var need = ROLE_RANK[minRole] || 99;
   if (have < need) {
     throw new Error('Your role (' + session.role + ') is not allowed to do that.');
+  }
+}
+
+function hasCap_(session, capability) {
+  var caps = ROLE_CAPS[session && session.role] || [];
+  return caps.indexOf(capability) !== -1;
+}
+
+function requireCap_(session, capability) {
+  if (!hasCap_(session, capability)) {
+    throw new Error('Your role (' + (session && session.role) +
+                    ') is not allowed to do that.');
   }
 }
 

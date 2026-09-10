@@ -42,8 +42,15 @@ window.WynAdmin = (function () {
       redirect: 'follow'
     })
       .then(function (res) { return res.text(); })
-      .then(function (text) { return parse(text); })
-      .catch(function () { return jsonp(body); });
+      /* Two handlers rather than a trailing .catch: the fallback must fire
+         only when the POST itself failed. A .catch here would also swallow
+         parse()'s "the server said no" error and retry the action over JSONP
+         — which, for something like sending a newsletter, would send it
+         twice. */
+      .then(
+        function (text) { return parse(text); },
+        function () { return jsonp(body); }
+      );
   }
 
   function parse(text) {
@@ -137,11 +144,39 @@ window.WynAdmin = (function () {
     });
   }
 
-  var ROLE_RANK = { basic: 1, planner: 2, admin: 3 };
+  /* basic / planner / admin stack. "email" — the Email Administrator, who
+     composes the newsletter and nothing else — sits outside that ladder, so
+     it ranks below basic and gets its access from ROLE_CAPS instead.
+     Keep both of these in step with Code.gs. */
+  var ROLE_RANK = { email: 0, basic: 1, planner: 2, admin: 3 };
+
+  var ROLE_CAPS = {
+    basic:   [],
+    planner: [],
+    admin:   ['newsletter'],
+    email:   ['newsletter']
+  };
+
+  var ROLE_LABELS = {
+    basic:   'Basic',
+    planner: 'Planner',
+    admin:   'Admin',
+    email:   'Email Administrator'
+  };
 
   function hasRole(minRole) {
     var user = getUser();
     return !!user && (ROLE_RANK[user.role] || 0) >= (ROLE_RANK[minRole] || 99);
+  }
+
+  /** True when this user's role carries a capability outside the ladder. */
+  function can(capability) {
+    var user = getUser();
+    return !!user && (ROLE_CAPS[user.role] || []).indexOf(capability) !== -1;
+  }
+
+  function roleLabel(role) {
+    return ROLE_LABELS[role] || role || '';
   }
 
   /* ── Small shared utilities ── */
@@ -196,6 +231,8 @@ window.WynAdmin = (function () {
     getToken: getToken,
     clearSession: clearSession,
     hasRole: hasRole,
+    can: can,
+    roleLabel: roleLabel,
     esc: esc,
     isoDate: isoDate,
     lastSunday: lastSunday,

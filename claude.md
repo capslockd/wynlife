@@ -152,21 +152,50 @@ Google Apps Script web app.
 | `admin-api.js` | Shared API client, session handling, date helpers |
 | `admin-config.js` | **The one file to edit** — holds the Apps Script `/exec` URL |
 | `admin.css` | Console and kiosk styling (uses `style.css` variables) |
+| `newsletter-templates.js` | The three email designs — turns one content object into sendable HTML |
 | `sunday-school-checkin.html` / `.js` | Parent-facing sign in / sign out kiosk (no login) |
-| `apps-script/Code.gs` | The backend: sheet setup, auth, all API actions |
+| `apps-script/Code.gs` | The backend: sheet setup, auth, members, attendance, reports |
+| `apps-script/Newsletter.gs` | The newsletter backend: recipients, issues, Brevo, unsubscribe |
 | `apps-script/README.md` | One-time setup, sheet layouts, roles, security notes |
 
 The `apps-script` folder is excluded from the Jekyll build, and both new pages
 are `noindex` and disallowed in `robots.txt`.
 
 Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
-(+ user management). At sign-in at the kiosk the parent chooses their own
+(+ user management and the Brevo settings). Those three stack by rank.
+`email` — **Email Administrator** — deliberately does not: it ranks *below*
+`basic` and gets the newsletter screens through the `newsletter` capability in
+`ROLE_CAPS`, so it can compose and send the newsletter and touch nothing else.
+`ROLE_CAPS` is mirrored in `Code.gs` (which enforces it) and `admin-api.js`
+(which only greys out menu items) — keep the two in step.
+
+At sign-in at the kiosk the parent chooses their own
 4-digit **collection PIN** which they must give back to sign the child out,
 and no child can be collected until 15 minutes after sign-in
 (`MIN_CARE_MINUTES`); staff can see the PIN on *Tracking > Setup Sunday
 School*. Read
 `apps-script/README.md` before changing anything here — a schema change there
 needs `setup()` re-run on the sheet.
+
+### Newsletter
+
+*Newsletter > Compose* builds a weekly email in one of three designs and sends
+it through **Brevo**, one copy per recipient, to the **Newsletter Recipients**
+sheet. The sections are: header, section 1 (sermon), sections 2–6 (five
+announcement slots), section 7 (giving), section 8 (child safety), footer.
+Everything but the sermon and the announcements is standing content, pre-filled
+from `WynNewsletter.blank()`.
+
+The email HTML is rendered **in the browser** by `newsletter-templates.js` and
+handed to the backend to send; the sheet stores only the content object as JSON
+(`Newsletter Issues`) and the per-recipient outcome (`Newsletter Send Log`). So
+there is one copy of each design, not one in JavaScript and another in Apps
+Script — if you change a design, change it there.
+
+Sends are chunked (40 recipients per request) because Apps Script kills any
+request at six minutes; the console loops until the backend reports `done`.
+The standing images the defaults point at live in `assets/newsletter/`.
+The Brevo API key is in Script Properties, never in the sheet or the repo.
 
 ## Common Issues and Solutions
 
