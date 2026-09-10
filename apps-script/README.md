@@ -5,9 +5,11 @@ The admin console at **/admin/** and the parent check-in page at
 Spreadsheet, and a Google Apps Script web app is the API in between.
 
 ```
-/admin/  ─┐
-          ├─►  Apps Script web app (Code.gs)  ─►  "Wynlife Management App Data Sheet"
-/sunday-school-checkin/  ─┘
+/admin/  ─────────────────┐
+                          ├──►  Apps Script web app  ──►  "Wynlife Management
+/sunday-school-checkin/  ─┘     (Code.gs, Newsletter.gs)      App Data Sheet"
+                                          │
+                                          └──►  Brevo  ──►  the newsletter
 ```
 
 Do the setup once. After that, everything is managed from the website.
@@ -31,7 +33,12 @@ Do the setup once. After that, everything is managed from the website.
 1. In the spreadsheet: **Extensions > Apps Script**.
 2. Delete the sample `myFunction` code.
 3. Paste the entire contents of [`Code.gs`](Code.gs).
-4. Click the save icon.
+4. **File > +** (new script file), name it `Newsletter`, and paste the entire
+   contents of [`Newsletter.gs`](Newsletter.gs) into it.
+5. Click the save icon.
+
+Both files share one global scope, so `Newsletter.gs` uses the helpers defined
+in `Code.gs`. Neither works without the other.
 
 ## 3. Run `setup()` once
 
@@ -39,7 +46,7 @@ Do the setup once. After that, everything is managed from the website.
 2. Grant the permissions it asks for (it is your own script acting on your own
    spreadsheet).
 
-`setup()` creates the four sheets with their header rows, freezes and formats
+`setup()` creates the seven sheets with their header rows, freezes and formats
 them, and creates the bootstrap administrator:
 
 | | |
@@ -79,11 +86,30 @@ window.WYNLIFE_ADMIN_CONFIG = {
 Commit and push. The admin console is then live at
 <https://www.wynlife.com.au/admin/> and linked from **About > Church Admin**.
 
-### After changing `Code.gs`
+### After changing `Code.gs` or `Newsletter.gs`
 
 **Deploy > Manage deployments >** pencil icon **> Version: New version > Deploy.**
 Keeping the same deployment keeps the same `/exec` URL, so `admin-config.js`
 does not need to change.
+
+## 6. Connect Brevo (only if you are sending the newsletter)
+
+1. In Brevo: **SMTP & API > API Keys > Generate a new API key**. Copy it — it
+   is shown once.
+2. In Brevo: **Senders, Domains & Dedicated IPs**, and verify the address you
+   want the newsletter to come from (`info@wynlife.com.au`). Brevo refuses to
+   send from an unverified sender.
+3. Sign in to **/admin/** as an admin, go to **Newsletter > Email Settings**,
+   paste the key and set the sender name and address.
+
+The key is written to the Apps Script's own **Script Properties**, never to the
+spreadsheet, and is never sent back to the browser. If you would rather not
+paste it through a web form, open the Apps Script editor, put it into
+`setBrevoKey()` in `Newsletter.gs`, run that function once, then blank it out
+again.
+
+Deliverability is worth ten minutes: add Brevo's SPF and DKIM records to the
+`wynlife.com.au` DNS, or a good share of the newsletter will land in spam.
 
 ---
 
@@ -161,20 +187,122 @@ still be signed out without one.
 | User ID | `USR-0001` |
 | Email | the login |
 | Display Name | shown in the console |
-| Role | `basic`, `planner` or `admin` |
+| Role | `basic`, `planner`, `admin` or `email` |
 | Salt / Password Hash | salted SHA-256; the plain password is never stored |
 | Active | `FALSE` blocks sign-in |
 | Created At / Last Login | timestamps |
 
 ### Roles
 
-| Role | Can do |
-|---|---|
-| `basic` | View members, run both reports |
-| `planner` | Everything above, plus add/modify members, record Sunday attendance, set up Sunday School |
-| `admin` | Everything, plus add and modify users |
+| Role | Shown as | Can do |
+|---|---|---|
+| `basic` | Basic | View members, run both reports |
+| `planner` | Planner | Everything above, plus add/modify members, record Sunday attendance, set up Sunday School |
+| `admin` | Admin | Everything, plus add and modify users, and the Brevo settings |
+| `email` | Email Administrator | Compose, test and send the newsletter, and manage the recipients list. Nothing else — no members, no attendance, no reports, no users |
+
+The first three stack: a planner can do everything a basic user can, and an
+admin everything a planner can. `email` sits outside that ladder rather than at
+the bottom of it, so it has a rank of zero and is granted the one thing it
+needs — the `newsletter` capability — through `ROLE_CAPS`. That is why adding an
+Email Administrator does not quietly hand them the reports.
+
+`ROLE_CAPS` is defined twice on purpose: in `Code.gs`, which enforces it, and
+in `admin-api.js`, which only decides what to grey out in the menu. **Keep the
+two in step.** The browser copy is a convenience; the script is the authority
+and re-checks every request.
 
 The script refuses to demote or disable the last active admin.
+
+### `Newsletter Recipients` — the mailing list
+
+| Column | Notes |
+|---|---|
+| Recipient ID | `RCP-0001` |
+| Email | the address; one row per address, checked for duplicates |
+| First Name / Last Name | optional; the first name fills `{{FIRST_NAME}}` |
+| Status | `subscribed`, `unsubscribed` or `bounced` — only `subscribed` is sent to |
+| Groups | comma separated, e.g. `families, foodbank`; lets an issue go to part of the list |
+| Source | how they got on the list |
+| Notes | free text |
+| Unsubscribe Token | random, generated once; the unsubscribe link is only honoured if it matches |
+| Added By / Added At / Updated At | set by the app |
+| Last Sent At / Last Send Result | updated after each send |
+
+Anyone who clicks **Unsubscribe** in a newsletter footer is set to
+`unsubscribed` here by the script itself and is skipped from then on. The
+confirmation page offers a resubscribe link in case they misclicked. You can
+also change a status by hand from **Newsletter > Recipients**.
+
+### `Newsletter Issues` — one row per issue
+
+| Column | Notes |
+|---|---|
+| Newsletter ID | `NLT-0001` |
+| Issue Date, Subject, Preheader, Design | as composed |
+| Status | `draft` → `sending` → `sent` |
+| Sections Used | a readable summary, e.g. `Sermon \| Ann 1: Fellowship Lunch \| Giving \| Child Safety` |
+| Content JSON | everything typed into the composer, so an issue can be reopened |
+| Created By / Created At / Updated By / Updated At | who composed it, and when |
+| Sent By / Sent At | who pressed send |
+| Recipient Count / Sent Count / Failed Count | filled in as the send runs |
+| Last Test To | the addresses the last test went to |
+
+The email HTML itself is **not** stored — it is rebuilt from `Content JSON` by
+`newsletter-templates.js` whenever an issue is opened. That keeps one copy of
+each design, and keeps the cell inside the 50,000-character limit a Google
+Sheets cell allows. The script refuses to save an issue whose JSON would come
+close to that.
+
+A `sent` issue cannot be edited or deleted — opening it from the history starts
+a fresh draft from its content instead, so last week's record never changes
+under you.
+
+### `Newsletter Send Log` — one row per recipient per send
+
+| Column | Notes |
+|---|---|
+| Log ID | `SND-000001` |
+| Newsletter ID, Issue Date, Subject | which issue |
+| Email | who it went to |
+| Kind | `newsletter` or `test` |
+| Result | `sent` or `failed` |
+| Provider Message ID | Brevo's id, for chasing a specific email |
+| Error | why it failed, when it did |
+| Sent By / Sent At | timestamps |
+
+---
+
+## Sending a newsletter
+
+1. **Newsletter > Compose Newsletter.** Pick one of the three designs —
+   Classic, Dark or Editorial. Switching between them keeps everything you have
+   typed; only the styling changes.
+2. Fill in the subject, the sermon, and as many of the five announcement slots
+   as you need. **Giving**, **Child Safety**, the header and the footer are
+   already filled in with the standing wording, so most weeks you leave them
+   alone. An announcement slot with nothing in it is dropped from the email.
+3. Pictures: paste an `https://` link, or press **Upload a picture** and the
+   script stores it on Drive and links it for you. Anything already on the
+   church website (`https://www.wynlife.com.au/assets/newsletter/…`) is the most
+   reliable choice, since it is served the same way as the rest of the site.
+4. Watch the preview beside the form, and use **Phone** to see how it stacks on
+   a small screen.
+5. **Send a Test** to yourself. Look at it in a real inbox — a preview cannot
+   tell you how Outlook or Gmail will treat it.
+6. **Send to the List**, choosing everyone or one group. The console sends in
+   batches of 40 and shows progress; each person gets their own copy, so nobody
+   sees anyone else's address, and each copy carries that person's own
+   unsubscribe link.
+
+Two placeholders can be used anywhere in the text: `{{FIRST_NAME}}` becomes the
+recipient's first name (or "Friend"), and `{{EMAIL}}` their address.
+
+Apps Script stops any single request after six minutes, which is why the send
+is chunked. If a send is interrupted, the issue keeps a `sending` status and the
+counts it reached; sending again starts from the beginning of the list, so
+people already reached would get a second copy — check the **Newsletter Send
+Log** first.
 
 ---
 
@@ -216,6 +344,17 @@ Worth being clear about, since this is a static site with a public API:
   sign-out is refused unless it carries the PIN chosen at sign-in and the
   15-minute wait has passed. Rosters sent to the kiosk have the PINs stripped
   out.
+* The Brevo API key lives in Script Properties, not in the sheet and not in the
+  repository. Only an `admin` can set it, and it is never returned to the
+  browser — the settings screen shows the first few characters and nothing more.
+  An Email Administrator can send with it but cannot read it.
+* The unsubscribe link is the one newsletter action that needs no login. It
+  only works when the recipient id and its random token match the row in
+  `Newsletter Recipients`, so a stranger cannot unsubscribe someone by guessing
+  an address, and the worst a leaked link can do is unsubscribe that one person.
+* Uploaded newsletter pictures are put on Drive with "anyone with the link can
+  view" — they have to be, since email clients fetch them without signing in.
+  Do not upload anything you would not put on the public website.
 * Anyone who can read the repository can see the `/exec` URL, so treat the
   spreadsheet as the security boundary: keep it shared with the church admin
   account only, and change the bootstrap password immediately.
