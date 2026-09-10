@@ -275,6 +275,11 @@ under you.
 
 ## Sending a newsletter
 
+0. If you have never sent one, press **Start from the Sample Issue** on the
+   history screen. That fills in a complete week — sermon, Wednesday prayer,
+   Life Groups, Fellowship Lunch and Food Bank, with their pictures — so you
+   can edit a real newsletter down rather than fill a blank one in. Saving it
+   creates a new draft; the sample itself is never changed.
 1. **Newsletter > Compose Newsletter.** Pick one of the three designs —
    Classic, Dark or Editorial. Switching between them keeps everything you have
    typed; only the styling changes.
@@ -297,6 +302,36 @@ under you.
 
 Two placeholders can be used anywhere in the text: `{{FIRST_NAME}}` becomes the
 recipient's first name (or "Friend"), and `{{EMAIL}}` their address.
+
+### What happens to an uploaded picture
+
+Upload whatever you have — the browser prepares it before it goes anywhere:
+
+* **Shrunk** so the longest edge is at most 1200px. That is twice the widest
+  column, so it still looks sharp on a phone or a retina screen, and the rest
+  is weight nobody sees. Small pictures are never stretched up; if one is
+  narrower than the column you get a warning that it will look soft.
+* **Re-compressed** to JPEG, dropping the quality in steps until it is under
+  500 KB. A picture that genuinely uses transparency — a logo, say — stays a
+  PNG instead, so it does not gain a white box.
+* **Turned the right way up.** A photo taken sideways carries a rotation flag
+  rather than rotated pixels; that is read and applied, so it does not arrive
+  on its side.
+* GIFs and SVGs are passed through untouched, since a canvas would flatten an
+  animation and rasterise a vector.
+
+A typical phone photo goes from about 3–5 MB to 150–350 KB with no visible
+difference at email size. The line under the upload button tells you exactly
+what happened, e.g. *Resized 4032×3024 → 1200×900. 3.4 MB → 349 KB.*
+
+Nothing is converted to **WebP** on purpose: Outlook on Windows renders through
+the Word engine, which cannot display it, and those recipients would see a
+broken image rather than a smaller one.
+
+An image is never cropped and never widens the newsletter — it is scaled to the
+column and the height follows its own proportions. A portrait photo therefore
+becomes a tall block. The designs are built around 16:9 pictures, so landscape
+is what to aim for.
 
 Apps Script stops any single request after six minutes, which is why the send
 is chunked. If a send is interrupted, the issue keeps a `sending` status and the
