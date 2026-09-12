@@ -200,6 +200,14 @@ The Brevo API key is in Script Properties, never in the sheet or the repo.
 mockup, reachable at `#/newsletter/compose/sample`. Its pictures, and the
 standing ones the defaults point at, live in `assets/newsletter/`.
 
+The five announcement slots are reorderable — by drag, or by the ↑↓ buttons
+that give keyboard and touch users the same move (HTML5 drag does neither).
+A move is just a splice of `nlDraft.announcements`, since that array's order
+*is* the order in the email; `renderAnnouncements()` then rebuilds the slots
+so their `data-nl` index paths match their new positions. Section numbering
+follows position, not content. Expanded/collapsed state rides along in
+`nlAnnOpen`, kept out of the content object so it never reaches the saved JSON.
+
 Uploaded pictures are prepared **in the browser** before they are sent
 (`prepareImage` in `admin.js`): longest edge capped at 1200px (2× the widest
 column), re-encoded to JPEG at falling quality until under 500 KB, kept as PNG

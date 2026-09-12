@@ -287,6 +287,11 @@ under you.
    as you need. **Giving**, **Child Safety**, the header and the footer are
    already filled in with the standing wording, so most weeks you leave them
    alone. An announcement slot with nothing in it is dropped from the email.
+   The announcements can be put in any order — drag one by the grip at the
+   left of its header bar, or use the ↑↓ buttons next to it. Whatever order
+   you leave them in is the order they appear in the email, and *Section 2…6*
+   renumber to match. The other sections are fixed: the sermon always leads,
+   and giving, child safety and the footer always close.
 3. Pictures: paste an `https://` link, or press **Upload a picture** and the
    script stores it on Drive and links it for you. Anything already on the
    church website (`https://www.wynlife.com.au/assets/newsletter/…`) is the most

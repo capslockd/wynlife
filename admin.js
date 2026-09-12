@@ -1317,13 +1317,210 @@
     return out;
   }
 
-  function nlSection(number, title, sub, bodyHtml, open) {
-    return '<details class="nl-section"' + (open ? ' open' : '') + '>' +
-      '<summary><span class="nl-num">' + esc(number) + '</span>' +
+  /**
+   * One collapsible section of the composer. Pass `movable` as the slot's
+   * index to make it draggable — the announcements are the only sections
+   * whose order is the writer's to choose.
+   */
+  function nlSection(number, title, sub, bodyHtml, open, movable) {
+    var draggable = typeof movable === 'number';
+    return '<details class="nl-section' + (draggable ? ' is-movable' : '') + '"' +
+      (draggable ? ' data-ann="' + movable + '"' : '') + (open ? ' open' : '') + '>' +
+      '<summary>' +
+      (draggable ? nlGrip(movable) : '') +
+      '<span class="nl-num">' + esc(number) + '</span>' +
       '<span class="nl-title">' + esc(title) + '</span>' +
       '<span class="nl-sub">' + esc(sub) + '</span></summary>' +
       '<div class="nl-section-body">' + bodyHtml + '</div>' +
     '</details>';
+  }
+
+  /**
+   * The grab area. Dragging is the quick way, but it is mouse-only — it does
+   * nothing on a tablet and nothing from a keyboard — so the same move is
+   * always available as a pair of buttons.
+   */
+  function nlGrip(index) {
+    return '<span class="nl-grip" title="Drag to reorder">' +
+        '<span class="nl-grip-dots" aria-hidden="true">⠿</span>' +
+        '<button type="button" class="nl-move" data-ann-move="' + index + '" ' +
+          'data-ann-dir="-1" aria-label="Move this announcement earlier">↑</button>' +
+        '<button type="button" class="nl-move" data-ann-move="' + index + '" ' +
+          'data-ann-dir="1" aria-label="Move this announcement later">↓</button>' +
+      '</span>';
+  }
+
+  /* ── The announcement slots, which the writer can reorder ──
+     The order of nlDraft.announcements *is* the order they appear in the
+     email, so a move is a move of that array and nothing else. The section
+     numbering stays with the position rather than the content: "Section 3"
+     means the third thing down the page, whatever is sitting there now.   */
+
+  /* Which slots are expanded. Held out here rather than on the content
+     object so it never reaches the saved JSON, and so a slot keeps its
+     open/closed state as it moves. */
+  var nlAnnOpen = [];
+
+  function announcementsHtml() {
+    return '<p class="nl-ann-hint">Sections 2–6 are yours to arrange. Drag one by its ' +
+      '<span class="nl-grip-dots" aria-hidden="true">⠿</span> handle, or use the ' +
+      '↑↓ buttons, to change the order they appear in the email.</p>' +
+      '<div class="nl-ann-list" id="nlAnnouncements">' +
+      nlDraft.announcements.map(announcementSection).join('') +
+    '</div>';
+  }
+
+  function announcementSection(item, i) {
+    var p = 'announcements.' + i + '.';
+    return nlSection('Section ' + (i + 2), 'Announcement #' + (i + 1),
+      item.title || item.label || 'nothing yet',
+      nlCheck(p + 'enabled', 'Include this announcement') +
+      '<div class="adm-grid-2">' +
+        nlText('Kicker', p + 'label', 'Small label above the heading.', 'e.g. Gatherings') +
+        nlText('Heading', p + 'title', '', 'e.g. Fellowship Lunch') +
+      '</div>' +
+      nlArea('Text', p + 'body', 'Leave a blank line between paragraphs.') +
+      nlImage('Picture', p + 'imageUrl') +
+      nlText('Picture description', p + 'imageAlt',
+             'Shown when pictures are blocked. Worth filling in.') +
+      nlRows('Details', p + 'details', 6,
+             'Optional. Dates, times, address — anything that reads better as a list.') +
+      '<div class="adm-grid-2">' +
+        nlText('Quote', p + 'quote', '', 'A verse, if you want one') +
+        nlText('Quote reference', p + 'quoteRef', '', 'e.g. 1 Thess. 5:16') +
+      '</div>' +
+      '<div class="adm-grid-2">' +
+        nlText('Link text', p + 'linkLabel', '', 'e.g. Find a group') +
+        nlText('Link address', p + 'linkUrl', '', 'https://…') +
+      '</div>',
+      nlAnnOpen[i], i);
+  }
+
+  /** Remembers what is expanded before the list is rebuilt underneath it. */
+  function captureAnnOpen() {
+    var host = document.getElementById('nlAnnouncements');
+    if (!host) return;
+    host.querySelectorAll('.nl-section[data-ann]').forEach(function (el) {
+      nlAnnOpen[+el.getAttribute('data-ann')] = el.open;
+    });
+  }
+
+  function renderAnnouncements() {
+    var host = document.getElementById('nlAnnouncements');
+    if (!host) return;
+    /* The input handlers are delegated from #nlEditor, so replacing this
+       markup does not cost us any bindings. */
+    host.innerHTML = nlDraft.announcements.map(announcementSection).join('');
+  }
+
+  /** Moves a slot, carrying its expanded state with it. */
+  function moveAnnouncement(from, to) {
+    var list = nlDraft.announcements;
+    if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return;
+    captureAnnOpen();
+    list.splice(to, 0, list.splice(from, 1)[0]);
+    nlAnnOpen.splice(to, 0, nlAnnOpen.splice(from, 1)[0]);
+    renderAnnouncements();
+    refreshPreview();
+    msg('nlMsg', 'Announcement moved to position ' + (to + 1) + ' of ' + list.length +
+        '. Save the draft to keep the new order.', 'info');
+  }
+
+  function bindAnnouncementOrdering() {
+    var host = document.getElementById('nlAnnouncements');
+    if (!host) return;
+    var dragFrom = -1;
+
+    function sectionOf(target) {
+      return target && target.closest ? target.closest('.nl-section[data-ann]') : null;
+    }
+
+    function clearMarks() {
+      host.querySelectorAll('.nl-section').forEach(function (el) {
+        el.classList.remove('is-dragging', 'drop-before', 'drop-after');
+      });
+    }
+
+    /* The up/down buttons live inside <summary>, where a plain click would
+       also open the section. */
+    host.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-ann-move]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var from = +btn.getAttribute('data-ann-move');
+      moveAnnouncement(from, from + +btn.getAttribute('data-ann-dir'));
+    });
+
+    /* Only the grip starts a drag. Marking the whole section draggable all
+       the time would stop you selecting text in the fields inside it. */
+    host.addEventListener('mousedown', function (e) {
+      var section = sectionOf(e.target);
+      if (!section) return;
+      section.draggable = !!e.target.closest('.nl-grip') && !e.target.closest('[data-ann-move]');
+    });
+
+    host.addEventListener('dragstart', function (e) {
+      var section = sectionOf(e.target);
+      if (!section || !section.draggable) return;
+      dragFrom = +section.getAttribute('data-ann');
+      section.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      /* Firefox will not start a drag unless something is on the clipboard. */
+      e.dataTransfer.setData('text/plain', String(dragFrom));
+      /* An expanded section makes a ghost the height of the page — drag the
+         header bar instead. */
+      var bar = section.querySelector('summary');
+      if (bar && e.dataTransfer.setDragImage) {
+        e.dataTransfer.setDragImage(bar, 20, bar.offsetHeight / 2);
+      }
+    });
+
+    host.addEventListener('dragover', function (e) {
+      if (dragFrom < 0) return;
+      var section = sectionOf(e.target);
+      if (!section) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      var box = section.getBoundingClientRect();
+      var after = e.clientY > box.top + box.height / 2;
+      clearMarks();
+      host.querySelector('.nl-section[data-ann="' + dragFrom + '"]')
+        .classList.add('is-dragging');
+      if (+section.getAttribute('data-ann') !== dragFrom) {
+        section.classList.add(after ? 'drop-after' : 'drop-before');
+      }
+    });
+
+    host.addEventListener('drop', function (e) {
+      if (dragFrom < 0) return;
+      var section = sectionOf(e.target);
+      if (!section) return;
+      e.preventDefault();
+      var over = +section.getAttribute('data-ann');
+      var box = section.getBoundingClientRect();
+      var after = e.clientY > box.top + box.height / 2;
+      var to = after ? over + 1 : over;
+      /* Pulling an item out shifts everything below it up by one. */
+      if (dragFrom < to) to -= 1;
+      clearMarks();
+      var from = dragFrom;
+      dragFrom = -1;
+      moveAnnouncement(from, to);
+    });
+
+    host.addEventListener('dragend', function () {
+      dragFrom = -1;
+      clearMarks();
+      host.querySelectorAll('.nl-section[data-ann]').forEach(function (el) {
+        el.draggable = false;
+      });
+    });
+
+    /* Leaving the list entirely should not leave a stale drop line behind. */
+    host.addEventListener('dragleave', function (e) {
+      if (!host.contains(e.relatedTarget)) clearMarks();
+    });
   }
 
   /* ── Compose ── */
@@ -1371,32 +1568,13 @@
         '>' + esc(d.label) + ' — ' + esc(d.note) + '</option>';
     }).join('');
 
-    var announcements = nlDraft.announcements.map(function (item, i) {
-      return nlSection('Section ' + (i + 2), 'Announcement #' + (i + 1),
-        item.title || item.label || 'nothing yet',
-        nlCheck('announcements.' + i + '.enabled', 'Include this announcement') +
-        '<div class="adm-grid-2">' +
-          nlText('Kicker', 'announcements.' + i + '.label', 'Small label above the heading.',
-                 'e.g. Gatherings') +
-          nlText('Heading', 'announcements.' + i + '.title', '', 'e.g. Fellowship Lunch') +
-        '</div>' +
-        nlArea('Text', 'announcements.' + i + '.body',
-               'Leave a blank line between paragraphs.') +
-        nlImage('Picture', 'announcements.' + i + '.imageUrl') +
-        nlText('Picture description', 'announcements.' + i + '.imageAlt',
-               'Shown when pictures are blocked. Worth filling in.') +
-        nlRows('Details', 'announcements.' + i + '.details', 6,
-               'Optional. Dates, times, address — anything that reads better as a list.') +
-        '<div class="adm-grid-2">' +
-          nlText('Quote', 'announcements.' + i + '.quote', '', 'A verse, if you want one') +
-          nlText('Quote reference', 'announcements.' + i + '.quoteRef', '', 'e.g. 1 Thess. 5:16') +
-        '</div>' +
-        '<div class="adm-grid-2">' +
-          nlText('Link text', 'announcements.' + i + '.linkLabel', '', 'e.g. Find a group') +
-          nlText('Link address', 'announcements.' + i + '.linkUrl', '', 'https://…') +
-        '</div>',
-        i < 3);
-    }).join('');
+    /* First time through, open the slots that already say something — plus
+       the first three of a blank issue, so there is somewhere to start. */
+    nlAnnOpen = nlDraft.announcements.map(function (item, i) {
+      return !!(item.title || item.body || item.imageUrl) || i < 3;
+    });
+
+    var announcements = announcementsHtml();
 
     elView.innerHTML =
       '<div class="adm-panel">' +
@@ -1521,6 +1699,7 @@
       '</div>';
 
     bindCompose();
+    bindAnnouncementOrdering();
     refreshPreview();
     if (message) msg('nlMsg', message, 'info');
   }
