@@ -4,7 +4,7 @@
 
      classic    light page, navy masthead, full-bleed image cards
      dark       navy page, big display headings, quiet rules
-     editorial  warm paper stock, numbered contents, ruled sections
+     editorial  warm paper stock, ruled contents and sections
 
    The browser renders the email (here) and hands the finished HTML to the
    Apps Script backend, which posts it to Brevo. That keeps one copy of each
@@ -23,7 +23,7 @@ window.WynNewsletter = (function () {
   var DESIGNS = [
     { id: 'classic',   label: 'Classic',   note: 'Light page, navy masthead, full-bleed image cards.' },
     { id: 'dark',      label: 'Dark',      note: 'Navy page, large display headings, quiet rules.' },
-    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, numbered contents, ruled sections.' }
+    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, ruled contents and sections.' }
   ];
 
   /* ── Small helpers ───────────────────────────────────────────────────── */
@@ -70,6 +70,17 @@ window.WynNewsletter = (function () {
       '" style="display:block; width:' + w + 'px; max-width:100%; height:auto; border:0; outline:none;">';
   }
 
+  /**
+   * The opening tag of a nested, full-width layout table. The width goes in
+   * the inline style as well as the attribute: some mobile clients (Gmail on
+   * iOS among them) drop the attribute, and the table then shrinks to fit its
+   * contents — which is what left the rules and the times block half-width.
+   */
+  function tbl(style, attrs) {
+    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"' +
+      (attrs ? ' ' + attrs : '') + ' style="width:100%;' + (style ? ' ' + style : '') + '">';
+  }
+
   /** A "label / value" table — Food Bank details, giving accounts. */
   function detailTable(items, opts) {
     var list = (items || []).filter(function (item) {
@@ -85,8 +96,7 @@ window.WynNewsletter = (function () {
           rule + ' ' + opts.valueStyle + '">' + escBr(item.v) + '</td>' +
       '</tr>';
     }).join('');
-    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"' +
-      (opts.tableStyle ? ' style="' + opts.tableStyle + '"' : '') + '>' + rows + '</table>';
+    return tbl(opts.tableStyle) + rows + '</table>';
   }
 
   function linkTo(url, label, style) {
@@ -133,7 +143,8 @@ window.WynNewsletter = (function () {
       /* Outer edges sit flush; the gutter goes between the columns. */
       var pad = opts.padY + ' ' + (i === last ? opts.edge : opts.gap) +
                 ' ' + opts.padY + ' ' + (i === 0 ? opts.edge : opts.gap);
-      return '<td class="stack" width="' + width + '%" valign="top" ' +
+      return '<td class="stack' + (opts.cellClass ? ' ' + opts.cellClass : '') + '" ' +
+        'width="' + width + '%" valign="top" ' +
         'style="width:' + width + '%; padding:' + pad + ';">' +
         '<div style="' + opts.labelStyle + '">' + escBr(t.label) + '</div>' +
         '<div style="' + opts.valueStyle + '">' + escBr(t.value) + '</div>' +
@@ -163,8 +174,8 @@ window.WynNewsletter = (function () {
       '<body style="margin:0; padding:0; background-color:' + bodyBg + ';">\n' +
       '<span style="display:none; font-size:1px; color:' + bodyBg + '; line-height:1px; max-height:0; ' +
       'max-width:0; opacity:0; overflow:hidden;">' + esc(content.preheader || '') + '</span>\n\n' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
-      'style="background-color:' + bodyBg + ';">\n<tr>\n<td align="center" style="padding:24px 12px;">\n\n' +
+      tbl('background-color:' + bodyBg + ';') +
+      '\n<tr>\n<td align="center" style="padding:24px 12px;">\n\n' +
       '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" ' +
       'style="width:600px; max-width:600px; background-color:' + cardBg + ';">\n' +
       inner +
@@ -186,9 +197,9 @@ window.WynNewsletter = (function () {
 
     /* Masthead */
     out.push('  <tr>\n    <td bgcolor="#1a2744" style="background-color:#1a2744; padding:0;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       '<td class="pad" style="padding:24px 32px 20px 32px;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       '<td align="left" width="290" style="width:290px;">' +
       '<a href="' + esc(SITE) + '/" style="text-decoration:none;">' +
       image(c.header.bannerUrl, 'WynLife Church', 240) + '</a></td>' +
@@ -229,8 +240,7 @@ window.WynNewsletter = (function () {
     });
     if (glance) {
       out.push('  <tr>\n    <td class="pad" style="padding:28px 32px 0 32px;">' +
-        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
-        'style="border-top:2px solid #1a2744; border-bottom:2px solid #1a2744;"><tr>' + glance +
+        tbl('border-top:2px solid #1a2744; border-bottom:2px solid #1a2744;') + '<tr>' + glance +
         '</tr></table></td>\n  </tr>');
     }
 
@@ -334,9 +344,9 @@ window.WynNewsletter = (function () {
         '</td>\n  </tr>');
     }
     out.push('  <tr>\n    <td bgcolor="#1a2744" style="background-color:#1a2744; padding:0;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       '<td class="pad" style="padding:30px 32px 24px 32px;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       (has(c.footer.logoUrl)
         ? '<td width="141" valign="top" style="width:141px; padding-right:20px;">' +
           image(c.footer.logoUrl, 'WynLife Church', 121) + '</td>'
@@ -374,7 +384,7 @@ window.WynNewsletter = (function () {
 
     /* Masthead */
     out.push('  <tr>\n    <td class="pad" style="padding:26px 30px 22px 30px;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       '<td align="left" width="260" style="width:260px;">' +
       '<a href="' + esc(SITE) + '/" style="text-decoration:none;">' +
       image(c.header.bannerUrl, 'WynLife Church', 220) + '</a></td>' +
@@ -410,8 +420,7 @@ window.WynNewsletter = (function () {
     });
     if (glance) {
       out.push('  <tr>\n    <td class="pad" style="padding:28px 30px 0 30px;">' +
-        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
-        'style="border-top:1px solid #3d4d75; border-bottom:1px solid #3d4d75;"><tr>' + glance +
+        tbl('border-top:1px solid #3d4d75; border-bottom:1px solid #3d4d75;') + '<tr>' + glance +
         '</tr></table></td>\n  </tr>');
     }
 
@@ -502,7 +511,7 @@ window.WynNewsletter = (function () {
         '</td>\n  </tr>');
     }
     out.push('  <tr>\n    <td class="pad" style="padding:30px 30px 32px 30px;">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       (has(c.footer.logoUrl)
         ? '<td width="100" valign="top" style="width:100px; padding-right:20px;">' +
           image(c.footer.logoUrl, 'WynLife Church', 80) + '</td>'
@@ -540,18 +549,14 @@ window.WynNewsletter = (function () {
     var out = [];
 
     function hairline(color) {
-      return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' +
-        '<tr><td style="height:1px; background-color:' + color + '; line-height:1px; font-size:0;">' +
-        '&nbsp;</td></tr></table>';
-    }
-
-    function num(i) {
-      return (i < 10 ? '0' : '') + i;
+      return tbl() +
+        '<tr><td height="1" bgcolor="' + color + '" style="height:1px; line-height:1px; font-size:0; ' +
+        'mso-line-height-rule:exactly; background-color:' + color + ';">&nbsp;</td></tr></table>';
     }
 
     /* Masthead */
     out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+      tbl() + '<tr>' +
       '<td align="left" valign="middle" width="230" style="width:230px;">' +
       '<a href="' + esc(SITE) + '/" style="text-decoration:none;">' +
       image(c.header.logoDarkUrl || c.header.bannerUrl, 'WynLife Church', 200) + '</a></td>' +
@@ -574,32 +579,28 @@ window.WynNewsletter = (function () {
 
     if (contents.length) {
       var half = Math.ceil(contents.length / 2);
-      var column = function (items, offset) {
-        return items.map(function (label, i) {
-          return '<span style="color:#535b70;">' + num(offset + i + 1) + '</span> &nbsp;' +
-            esc(label) + '<br>';
+      var column = function (items) {
+        return items.map(function (label) {
+          return esc(label) + '<br>';
         }).join('');
       };
       out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
-        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
+        tbl() + '<tr>' +
         '<td class="stack" width="50%" valign="top" style="width:50%; padding-right:14px; ' +
         'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(0, half), 0) + '</td>' +
+        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(0, half)) + '</td>' +
         '<td class="stack" width="50%" valign="top" style="width:50%; ' +
         'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(half), half) + '</td>' +
+        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(half)) + '</td>' +
         '</tr></table></td>\n  </tr>');
       out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
         hairline('#c4c8d2') + '</td>\n  </tr>');
     }
 
-    var n = 0;
-
     /* Section 1 — sermon: headline, then image, then serif copy */
-    n += 1;
     out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
-      '<div style="' + KICKER + ' padding-bottom:10px;">' + num(n) + ' &nbsp;&mdash;&nbsp; ' +
-      escBr(c.sermon.kicker) + '</div>' +
+      (has(c.sermon.kicker) ? '<div style="' + KICKER + ' padding-bottom:10px;">' +
+        escBr(c.sermon.kicker) + '</div>' : '') +
       (has(c.sermon.title) ? '<div class="h1" style="font-family:Georgia,\'Times New Roman\',serif; ' +
         'font-size:36px; line-height:42px; mso-line-height-rule:exactly; color:#1a2744; ' +
         'font-weight:bold;">' + escBr(c.sermon.title) + '</div>' : '') +
@@ -618,7 +619,7 @@ window.WynNewsletter = (function () {
 
     /* Times — a tinted block rather than a rule */
     var glance = timesCells(c, {
-      padY: '18px', gap: '14px', edge: '20px',
+      padY: '18px', gap: '14px', edge: '20px', cellClass: 'glance',
       labelStyle: 'font-family:Arial,Helvetica,sans-serif; font-size:10px; line-height:14px; ' +
         'mso-line-height-rule:exactly; letter-spacing:2px; text-transform:uppercase; color:#535b70;',
       valueStyle: 'font-family:Georgia,\'Times New Roman\',serif; font-size:22px; line-height:28px; ' +
@@ -628,17 +629,15 @@ window.WynNewsletter = (function () {
     });
     if (glance) {
       out.push('  <tr>\n    <td class="pad" style="padding:26px ' + PAD + ' 0 ' + PAD + ';">' +
-        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
-        'bgcolor="#eeebe4" style="background-color:#eeebe4;"><tr>' + glance + '</tr></table>' +
+        tbl('background-color:#eeebe4;', 'bgcolor="#eeebe4"') + '<tr>' + glance + '</tr></table>' +
         '</td>\n  </tr>');
     }
 
     /* Sections 2–6 */
     live.forEach(function (item) {
-      n += 1;
       out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
         hairline('#c4c8d2') +
-        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' + num(n) + ' &nbsp;&mdash;&nbsp; ' +
+        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' +
         escBr(item.label || item.title) + '</div>' +
         (has(item.title) ? '<div style="' + H2 + '">' + escBr(item.title) + '</div>' : '') +
         prose(item.body, BODY + ' padding-top:12px;', 12) +
@@ -675,10 +674,9 @@ window.WynNewsletter = (function () {
 
     /* Section 7 — giving */
     if (c.giving.enabled !== false) {
-      n += 1;
       out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
         hairline('#c4c8d2') +
-        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' + num(n) + ' &nbsp;&mdash;&nbsp; ' +
+        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' +
         escBr(c.giving.label) + '</div>' +
         (has(c.giving.title) ? '<div style="' + H2 + '">' + escBr(c.giving.title) + '</div>' : '') +
         prose(c.giving.intro, BODY + ' padding-top:12px;', 12) +
@@ -693,9 +691,8 @@ window.WynNewsletter = (function () {
       });
       out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
         (givingRows
-          ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
-            'bgcolor="#eeebe4" style="background-color:#eeebe4;"><tr><td style="padding:20px;">' +
-            givingRows + '</td></tr></table>'
+          ? tbl('background-color:#eeebe4;', 'bgcolor="#eeebe4"') +
+            '<tr><td style="padding:20px;">' + givingRows + '</td></tr></table>'
           : '') +
         prose(c.giving.note, 'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:21px; ' +
           'mso-line-height-rule:exactly; color:#4d5567; padding-top:12px;', 8) +
@@ -708,10 +705,9 @@ window.WynNewsletter = (function () {
 
     /* Section 8 — child safety */
     if (c.childSafe.enabled !== false) {
-      n += 1;
       out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
         hairline('#c4c8d2') +
-        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' + num(n) + ' &nbsp;&mdash;&nbsp; ' +
+        '<div style="' + KICKER + ' padding:22px 0 10px 0;">' +
         escBr(c.childSafe.label) + '</div>' +
         prose(c.childSafe.body, BODY, 12) + '</td>\n  </tr>');
       (c.childSafe.images || []).forEach(function (img, i) {
@@ -753,7 +749,9 @@ window.WynNewsletter = (function () {
       '</td>\n  </tr>');
 
     return shell(c, '#e8e4dc', '#f7f5f0', out.join('\n'),
-      '    .h1 { font-size: 27px !important; line-height: 32px !important; }\n');
+      '    .h1 { font-size: 27px !important; line-height: 32px !important; }\n' +
+      /* td.<class> outranks .stack, so the tinted block keeps its inset. */
+      '    td.glance { padding-left: 20px !important; padding-right: 20px !important; }\n');
   }
 
   /* ── Public API ──────────────────────────────────────────────────────── */
