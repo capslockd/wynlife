@@ -4,7 +4,7 @@
 
      classic    light page, navy masthead, full-bleed image cards
      dark       navy page, big display headings, quiet rules
-     editorial  warm paper stock, ruled contents and sections
+     editorial  warm paper stock, ruled sections
 
    The browser renders the email (here) and hands the finished HTML to the
    Apps Script backend, which posts it to Brevo. That keeps one copy of each
@@ -23,7 +23,7 @@ window.WynNewsletter = (function () {
   var DESIGNS = [
     { id: 'classic',   label: 'Classic',   note: 'Light page, navy masthead, full-bleed image cards.' },
     { id: 'dark',      label: 'Dark',      note: 'Navy page, large display headings, quiet rules.' },
-    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, ruled contents and sections.' }
+    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, ruled sections.' }
   ];
 
   /* ── Small helpers ───────────────────────────────────────────────────── */
@@ -566,36 +566,9 @@ window.WynNewsletter = (function () {
       '</tr></table></td>\n  </tr>');
 
     var live = liveSections(c);
-    var contents = [];
-    if (has(c.sermon.title)) contents.push(c.sermon.contentsLabel || 'This Sunday');
-    live.forEach(function (item) {
-      contents.push(item.contentsLabel || item.label || item.title);
-    });
-    if (c.giving.enabled !== false) contents.push(c.giving.label || 'Giving');
-    if (c.childSafe.enabled !== false) contents.push(c.childSafe.label || 'Child Safety');
-
-    if (contents.length) {
-      var half = Math.ceil(contents.length / 2);
-      var column = function (items) {
-        return items.map(function (label) {
-          return esc(label) + '<br>';
-        }).join('');
-      };
-      out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
-        tbl() + '<tr>' +
-        '<td class="stack" width="50%" valign="top" style="width:50%; padding-right:14px; ' +
-        'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(0, half)) + '</td>' +
-        '<td class="stack" width="50%" valign="top" style="width:50%; ' +
-        'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(half)) + '</td>' +
-        '</tr></table></td>\n  </tr>');
-      out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
-        hairline('#c4c8d2') + '</td>\n  </tr>');
-    }
 
     /* Section 1 — sermon: headline, then image, then serif copy */
-    out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
+    out.push('  <tr>\n    <td class="pad" style="padding:32px ' + PAD + ' 0 ' + PAD + ';">' +
       (has(c.sermon.kicker) ? '<div style="' + KICKER + ' padding-bottom:10px;">' +
         escBr(c.sermon.kicker) + '</div>' : '') +
       (has(c.sermon.title) ? '<div class="h1" style="font-family:Georgia,\'Times New Roman\',serif; ' +
