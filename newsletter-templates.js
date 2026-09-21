@@ -4,7 +4,7 @@
 
      classic    light page, navy masthead, full-bleed image cards
      dark       navy page, big display headings, quiet rules
-     editorial  warm paper stock, ruled contents and sections
+     editorial  warm paper stock, ruled sections
 
    The browser renders the email (here) and hands the finished HTML to the
    Apps Script backend, which posts it to Brevo. That keeps one copy of each
@@ -23,7 +23,7 @@ window.WynNewsletter = (function () {
   var DESIGNS = [
     { id: 'classic',   label: 'Classic',   note: 'Light page, navy masthead, full-bleed image cards.' },
     { id: 'dark',      label: 'Dark',      note: 'Navy page, large display headings, quiet rules.' },
-    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, ruled contents and sections.' }
+    { id: 'editorial', label: 'Editorial', note: 'Warm paper stock, ruled sections.' }
   ];
 
   /* ── Small helpers ───────────────────────────────────────────────────── */
@@ -564,41 +564,11 @@ window.WynNewsletter = (function () {
       'line-height:17px; mso-line-height-rule:exactly; letter-spacing:1.5px; text-transform:uppercase; ' +
       'color:#535b70;">' + escBr(c.header.kicker) + '</td>' +
       '</tr></table></td>\n  </tr>');
-    out.push('  <tr>\n    <td class="pad" style="padding:22px ' + PAD + ' 0 ' + PAD + ';">' +
-      hairline('#1a2744') + '</td>\n  </tr>');
 
-    /* Contents — built from whatever is actually in this issue */
     var live = liveSections(c);
-    var contents = [];
-    if (has(c.sermon.title)) contents.push(c.sermon.contentsLabel || 'This Sunday');
-    live.forEach(function (item) {
-      contents.push(item.contentsLabel || item.label || item.title);
-    });
-    if (c.giving.enabled !== false) contents.push(c.giving.label || 'Giving');
-    if (c.childSafe.enabled !== false) contents.push(c.childSafe.label || 'Child Safety');
-
-    if (contents.length) {
-      var half = Math.ceil(contents.length / 2);
-      var column = function (items) {
-        return items.map(function (label) {
-          return esc(label) + '<br>';
-        }).join('');
-      };
-      out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
-        tbl() + '<tr>' +
-        '<td class="stack" width="50%" valign="top" style="width:50%; padding-right:14px; ' +
-        'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(0, half)) + '</td>' +
-        '<td class="stack" width="50%" valign="top" style="width:50%; ' +
-        'font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:24px; ' +
-        'mso-line-height-rule:exactly; color:#333a4a;">' + column(contents.slice(half)) + '</td>' +
-        '</tr></table></td>\n  </tr>');
-      out.push('  <tr>\n    <td class="pad" style="padding:18px ' + PAD + ' 0 ' + PAD + ';">' +
-        hairline('#c4c8d2') + '</td>\n  </tr>');
-    }
 
     /* Section 1 — sermon: headline, then image, then serif copy */
-    out.push('  <tr>\n    <td class="pad" style="padding:30px ' + PAD + ' 0 ' + PAD + ';">' +
+    out.push('  <tr>\n    <td class="pad" style="padding:32px ' + PAD + ' 0 ' + PAD + ';">' +
       (has(c.sermon.kicker) ? '<div style="' + KICKER + ' padding-bottom:10px;">' +
         escBr(c.sermon.kicker) + '</div>' : '') +
       (has(c.sermon.title) ? '<div class="h1" style="font-family:Georgia,\'Times New Roman\',serif; ' +
@@ -784,7 +754,6 @@ window.WynNewsletter = (function () {
       },
       sermon: {
         kicker: 'This Sunday · 10:00 AM',
-        contentsLabel: 'This Sunday',
         title: '',
         reference: '',
         imageUrl: '',
@@ -795,7 +764,6 @@ window.WynNewsletter = (function () {
         return {
           enabled: i <= 3,
           label: '',
-          contentsLabel: '',
           title: '',
           body: '',
           imageUrl: '',
@@ -889,7 +857,6 @@ window.WynNewsletter = (function () {
     c.announcements[0] = merge(c.announcements[0], {
       enabled: true,
       label: 'Gatherings',
-      contentsLabel: 'Wednesday Night Prayer',
       title: 'Wednesday Night Prayer',
       body: 'Corporate prayer and worship every Wednesday evening as a church family, ' +
             '7:00 PM at the WynLife Centre. For prayer requests, please reach out to ' +
@@ -906,7 +873,6 @@ window.WynNewsletter = (function () {
     c.announcements[1] = merge(c.announcements[1], {
       enabled: true,
       label: 'Life Groups',
-      contentsLabel: 'Life Groups',
       title: 'Wyndham Vale, Werribee, Tarneit & Hoppers Crossing',
       body: 'Groups meet through the week across Wyndham Vale, Werribee, Tarneit ' +
             '& Hoppers Crossing. To find out more about our life groups, please ' +
@@ -920,7 +886,6 @@ window.WynNewsletter = (function () {
     c.announcements[2] = merge(c.announcements[2], {
       enabled: true,
       label: 'Fellowship Lunch',
-      contentsLabel: 'Fellowship Lunch',
       title: 'First Sunday of the month',
       body: 'First Sunday of the month, after the service. Invite a friend and bring ' +
             'a plate to share.',
@@ -933,7 +898,6 @@ window.WynNewsletter = (function () {
     c.announcements[3] = merge(c.announcements[3], {
       enabled: true,
       label: 'Food Bank Manor Lakes',
-      contentsLabel: 'Food Bank Manor Lakes',
       title: 'Expressing God’s grace and love, one life at a time – through ' +
              'long life groceries.',
       body: 'If you are able to give toiletries and financial support to cover the ' +
