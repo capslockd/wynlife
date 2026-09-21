@@ -1623,9 +1623,7 @@
               nlArea('Sermon summary', 'sermon.body',
                      'Leave a blank line between paragraphs.', 7) +
               nlImage('Sermon picture', 'sermon.imageUrl') +
-              nlText('Picture description', 'sermon.imageAlt') +
-              nlText('Contents label', 'sermon.contentsLabel',
-                     'How this appears in the Editorial design’s contents list.'),
+              nlText('Picture description', 'sermon.imageAlt'),
               true) +
 
             announcements +

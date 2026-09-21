@@ -564,10 +564,7 @@ window.WynNewsletter = (function () {
       'line-height:17px; mso-line-height-rule:exactly; letter-spacing:1.5px; text-transform:uppercase; ' +
       'color:#535b70;">' + escBr(c.header.kicker) + '</td>' +
       '</tr></table></td>\n  </tr>');
-    out.push('  <tr>\n    <td class="pad" style="padding:22px ' + PAD + ' 0 ' + PAD + ';">' +
-      hairline('#1a2744') + '</td>\n  </tr>');
 
-    /* Contents — built from whatever is actually in this issue */
     var live = liveSections(c);
     var contents = [];
     if (has(c.sermon.title)) contents.push(c.sermon.contentsLabel || 'This Sunday');
@@ -784,7 +781,6 @@ window.WynNewsletter = (function () {
       },
       sermon: {
         kicker: 'This Sunday · 10:00 AM',
-        contentsLabel: 'This Sunday',
         title: '',
         reference: '',
         imageUrl: '',
@@ -795,7 +791,6 @@ window.WynNewsletter = (function () {
         return {
           enabled: i <= 3,
           label: '',
-          contentsLabel: '',
           title: '',
           body: '',
           imageUrl: '',
@@ -889,7 +884,6 @@ window.WynNewsletter = (function () {
     c.announcements[0] = merge(c.announcements[0], {
       enabled: true,
       label: 'Gatherings',
-      contentsLabel: 'Wednesday Night Prayer',
       title: 'Wednesday Night Prayer',
       body: 'Corporate prayer and worship every Wednesday evening as a church family, ' +
             '7:00 PM at the WynLife Centre. For prayer requests, please reach out to ' +
@@ -906,7 +900,6 @@ window.WynNewsletter = (function () {
     c.announcements[1] = merge(c.announcements[1], {
       enabled: true,
       label: 'Life Groups',
-      contentsLabel: 'Life Groups',
       title: 'Wyndham Vale, Werribee, Tarneit & Hoppers Crossing',
       body: 'Groups meet through the week across Wyndham Vale, Werribee, Tarneit ' +
             '& Hoppers Crossing. To find out more about our life groups, please ' +
@@ -920,7 +913,6 @@ window.WynNewsletter = (function () {
     c.announcements[2] = merge(c.announcements[2], {
       enabled: true,
       label: 'Fellowship Lunch',
-      contentsLabel: 'Fellowship Lunch',
       title: 'First Sunday of the month',
       body: 'First Sunday of the month, after the service. Invite a friend and bring ' +
             'a plate to share.',
@@ -933,7 +925,6 @@ window.WynNewsletter = (function () {
     c.announcements[3] = merge(c.announcements[3], {
       enabled: true,
       label: 'Food Bank Manor Lakes',
-      contentsLabel: 'Food Bank Manor Lakes',
       title: 'Expressing God’s grace and love, one life at a time – through ' +
              'long life groceries.',
       body: 'If you are able to give toiletries and financial support to cover the ' +
