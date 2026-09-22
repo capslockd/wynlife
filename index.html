@@ -3,12 +3,13 @@ layout: none
 permalink: /
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta name="google-site-verification" content="vX7jy7PV757Oz2o3Pny6953_TTvv4lnRjZJ6ph2fq14">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WynLife Church — Wyndham Vale, Melbourne</title>
+  <link rel="canonical" href="https://www.wynlife.com.au/">
   <!-- Favicon — all sizes for browser tabs, Google search, iOS, Android -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/shared/favicon-16x16.png">
@@ -17,12 +18,18 @@ permalink: /
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/shared/favicon-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/shared/favicon-512x512.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Merriweather:wght@400;700&display=swap">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Icons are only used below the fold, so this stylesheet loads without blocking the first paint -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 
   <!-- Open Graph / Social sharing -->
   <meta property="og:type"        content="website">
   <meta property="og:site_name"   content="WynLife Church">
+  <meta property="og:locale"      content="en_AU">
   <meta property="og:url"         content="https://www.wynlife.com.au/">
   <meta property="og:title"       content="WynLife Church — Wyndham Vale, Melbourne">
   <meta property="og:description" content="A vibrant, multicultural Christian community in Melbourne's west. Join us Sundays at 10AM — 208 Ballan Rd, Wyndham Vale VIC 3024.">
@@ -37,6 +44,49 @@ permalink: /
   <meta name="twitter:image"       content="https://www.wynlife.com.au/assets/shared/social_share.png">
   <!-- WhatsApp / iMessage description -->
   <meta name="description"         content="A vibrant, multicultural Christian community in Melbourne's west. Join us Sundays at 10AM — 208 Ballan Rd, Wyndham Vale VIC 3024.">
+  <!-- Structured data for search engines. Every fact here must match the page:
+       if the address, phone, email or service times change, change them here too. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Church",
+        "@id": "https://www.wynlife.com.au/#church",
+        "name": "WynLife Church",
+        "url": "https://www.wynlife.com.au/",
+        "logo": "https://www.wynlife.com.au/assets/shared/favicon-512x512.png",
+        "image": "https://www.wynlife.com.au/assets/shared/social_share.png",
+        "description": "A multicultural Christian church in Wyndham Vale, Melbourne's west. Sunday service at 10:00 AM and Wednesday Night Prayer at 7:00 PM at 208 Ballan Rd, Wyndham Vale, with Life Groups across Wyndham Vale, Werribee, Tarneit and Hoppers Crossing.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "208 Ballan Rd",
+          "addressLocality": "Wyndham Vale",
+          "addressRegion": "VIC",
+          "postalCode": "3024",
+          "addressCountry": "AU"
+        },
+        "telephone": "+61 457 697 354",
+        "email": "info@wynlife.com.au",
+        "areaServed": ["Wyndham Vale", "Werribee", "Tarneit", "Hoppers Crossing", "Manor Lakes"],
+        "sameAs": [
+          "https://www.facebook.com/wynlifechurch.au",
+          "https://www.youtube.com/@wynlifechurch",
+          "https://www.instagram.com/wynlifechurch"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.wynlife.com.au/#website",
+        "name": "WynLife Church",
+        "alternateName": "WynLife",
+        "url": "https://www.wynlife.com.au/",
+        "inLanguage": "en-AU",
+        "publisher": { "@id": "https://www.wynlife.com.au/#church" }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -218,7 +268,7 @@ permalink: /
     <h1>Life Together<br>in <span>Christ</span></h1>
     <p>You are always welcome at WynLife Church. Find community, purpose, and faith right here in the western suburbs of Melbourne.</p>
     <div class="hero-btns">
-      <a href="/next-steps/" class="btn-hero-primary">I'm New Here</a>
+      <a href="/visit/" class="btn-hero-primary">I'm New Here</a>
       <a href="/church-online/" class="btn-hero-outline">Watch Online</a>
     </div>
   </div>
@@ -251,7 +301,7 @@ permalink: /
         <div class="section-label">Welcome Home</div>
         <h2 class="section-title">A Church Where<br>Everyone Belongs</h2>
         <hr class="divider">
-        <p class="section-body">WynLife Church is a multi-ultural family of Jesus-followers, empowered by the Holy Spirit.</p>
+        <p class="section-body">WynLife Church is a multicultural family of Jesus-followers, empowered by the Holy Spirit.</p>
         <p class="section-body mt-16">To love God; to learn His word to live for Him; to love the people.</p>
         <p class="section-body mt-16">We are intentional in disciple-ising all nations, all for the glory of God!</p>
         <div class="btn-row mt-32" class="btn-row" style="display:flex;gap:14px;flex-wrap:wrap;">
@@ -327,7 +377,7 @@ permalink: /
           Every lesson is age-appropriate, engaging, and rooted firmly in the truth of God's Word. It's a place where kids can learn, ask questions, and grow in their faith in a fun and welcoming environment.
         </p>
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:32px;" class="btn-row">
-          <a href="/gatherings/#sunday-school" class="btn btn-primary">Learn More</a>
+          <a href="/gatherings/#sunday-school" class="btn btn-primary">More About Sunday School</a>
           <a href="https://gracecurriculum.org/pages/about-generations-of-grace" target="_blank" class="btn btn-outline">About the Curriculum</a>
         </div>
       </div>
@@ -384,7 +434,7 @@ permalink: /
     </div>
     <div class="card-grid">
       <div class="card">
-        <div class="card-img-contain"><img src="/assets/church-online/online_service.png" alt="Church Online"></div>
+        <div class="card-img-contain"><img src="/assets/church-online/hero.JPG" alt="Church Online" loading="lazy"></div>
         <div class="card-body">
           <div class="card-tag">&#127916; Watch Online</div>
           <div class="card-title">Church Online</div>
@@ -459,6 +509,7 @@ permalink: /
     <div class="footer-col">
       <h4>Info</h4>
       <ul>
+        <li><a href="/visit/">Your First Sunday</a></li>
         <li><a href="/about/#beliefs">Bible Beliefs</a></li>
         <li><a href="/about/#leadership">Leadership</a></li>
         <li><a href="/whats-on/">What's On</a></li>

@@ -113,12 +113,19 @@ The page for online services:
 3. **Image Sizes:** Use appropriate image sizes (check existing images for reference)
 4. **Testing:** Test changes by viewing the page locally or in browser
 5. **Responsive Design:** Ensure updates work on mobile devices
+6. **Service times, address, phone or email changed?** Change them everywhere
+   they appear, including the structured data (`application/ld+json`) in the
+   `<head>` of `index.html`, the meta descriptions, and `visit.html`. Google
+   reads those, and a stale value there is what people see in search results.
+7. **New page?** Give it its own `<title>`, description, `og:url` and
+   `<link rel="canonical">`, and add it to `sitemap.xml`.
 
 ## File Structure Overview
 
 ```
 .
 ├── index.html              # Home page
+├── visit.html              # Your First Sunday — what to expect (/visit/)
 ├── whats-on.html           # What's On/Announcements page
 ├── church-online.html      # Church Online page
 ├── gatherings.html         # Gatherings page
