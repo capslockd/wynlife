@@ -3,7 +3,8 @@
    Mobile-first, clean responsive layout
    ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Merriweather:wght@400;700&display=swap');
+/* Fonts (Lato, Merriweather) are linked from each page's <head>, not @imported
+   here, so the browser can fetch them in parallel with this file. */
 
 /* ── VARIABLES ── */
 :root {

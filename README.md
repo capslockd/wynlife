@@ -5,7 +5,7 @@ Official website for **WynLife Church** — a vibrant, multicultural Christian c
 🌐 **Live site:** [https://www.wynlife.com.au](https://www.wynlife.com.au)
 📍 **208 Ballan Rd, Wyndham Vale VIC 3024**
 📞 **+61 457 697 354**
-✉️ **info@wynlife.com.au**
+✉️ **connect@wynlife.com.au**
 
 ---
 
@@ -14,6 +14,7 @@ Official website for **WynLife Church** — a vibrant, multicultural Christian c
 | File | Page |
 |---|---|
 | `index.html` | Home |
+| `visit.html` | Your First Sunday — what to expect (`/visit/`, the home page "I'm New Here" button) |
 | `gatherings.html` | Gatherings |
 | `church-online.html` | Church Online |
 | `whats-on.html` | What's On |
@@ -62,7 +63,7 @@ This is a **pure static website** — no frameworks, no build tools, no dependen
 - **Vanilla JavaScript** — `nav.js` injects the shared nav and footer into every page at runtime
 - **Google Fonts** — Merriweather (headings) + Lato (body)
 - **YouTube embed** — click-to-play on Church Online page
-- **mailto: form** — the contact form on `pray.html` opens the visitor's email client with details pre-filled to `info@wynlife.com.au`
+- **mailto: form** — the contact form on `pray.html` opens the visitor's email client with details pre-filled to `connect@wynlife.com.au`
 
 ---
 
@@ -101,6 +102,15 @@ Open `whats-on.html` and add a new two-column block inside the `#announcements` 
 - **Service times strip** — edit the `.service-strip` block in `index.html`
 - **Footer contact details** — edit the `FOOTER_HTML` string in `nav.js`
 - **Contact page details** — edit the info rows in `pray.html`
+- **Also update, whenever any of the above changes:** the structured data
+  (`<script type="application/ld+json">`) in the `<head>` of `index.html`, the
+  meta descriptions that mention the time or address (`index.html`,
+  `gatherings.html`, `pray.html`, `visit.html`), and the details on `visit.html`.
+  Search engines read these, so a stale time there shows up in Google.
+
+### Adding a new page
+Copy the `<head>` from an existing page, and set its `<title>`, description,
+`og:url` and `<link rel="canonical">` to the new page. Add it to `sitemap.xml`.
 
 ---
 

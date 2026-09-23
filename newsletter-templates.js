@@ -814,7 +814,7 @@ window.WynNewsletter = (function () {
         ctaUrl: SITE + '/next-steps/',
         logoUrl: SITE + '/assets/newsletter/wynlife-logo.png',
         orgName: 'WynLife Church',
-        address: '208 Ballan Rd (next to KFC)\nWyndham Vale VIC 3024\n+61 457 697 354 · info@wynlife.com.au',
+        address: '208 Ballan Rd (next to KFC)\nWyndham Vale VIC 3024\n+61 457 697 354 · connect@wynlife.com.au',
         links: [
           { label: 'Website',   url: SITE + '/' },
           { label: 'Facebook',  url: 'https://www.facebook.com/wynlifechurch.au' },
