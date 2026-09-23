@@ -234,5 +234,5 @@ their alpha.
 ## Contact Information
 
 For technical questions or assistance with website updates, contact:
-- Email: info@wynlife.com.au
+- Email: connect@wynlife.com.au
 - Phone: +61 457 697 354

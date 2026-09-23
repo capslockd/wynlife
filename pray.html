@@ -343,14 +343,14 @@ permalink: /pray/
             <div style="width:44px;height:44px;background:var(--gray-light);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">&#9993;</div>
             <div>
               <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:3px;">Email</div>
-              <div style="font-size:0.95rem;"><a href="mailto:info@wynlife.com.au">info@wynlife.com.au</a></div>
+              <div style="font-size:0.95rem;"><a href="mailto:connect@wynlife.com.au">connect@wynlife.com.au</a></div>
             </div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;">
             <div style="width:44px;height:44px;background:var(--gray-light);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">&#128336;</div>
             <div>
               <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:3px;">Sunday Service</div>
-              <div style="font-size:0.95rem;color:var(--text);">10:00 AM every Sunday</div>
+              <div style="font-size:0.95rem;color:var(--text);">10:00 AM &ndash; 12:00 PM every Sunday</div>
             </div>
           </div>
         </div>
@@ -371,7 +371,7 @@ permalink: /pray/
       <div>
         <h3 style="font-family:'Merriweather',serif;font-size:1.7rem;color:var(--navy);margin-bottom:8px;">Send Us a Message</h3>
         <p style="font-size:0.92rem;color:var(--gray);margin-bottom:28px;line-height:1.65;">
-          Fill in the form below and click <strong>Send Message</strong>. Your email client will open with everything pre-filled and addressed to <strong>info@wynlife.com.au</strong>.
+          Fill in the form below and click <strong>Send Message</strong>. Your email client will open with everything pre-filled and addressed to <strong>connect@wynlife.com.au</strong>.
         </p>
 
         <!-- Type toggle — rebuilt with onclick on each button -->
@@ -407,8 +407,8 @@ permalink: /pray/
         <button type="button" class="send-btn" onclick="sendEmail()">Send Message &rarr;</button>
 
         <div class="success-box" id="successBox">
-          &#9989; Your email client has been opened with your message ready to send to <strong>info@wynlife.com.au</strong>.<br><br>
-          If it didn't open automatically, please email us directly at <a href="mailto:info@wynlife.com.au">info@wynlife.com.au</a>.
+          &#9989; Your email client has been opened with your message ready to send to <strong>connect@wynlife.com.au</strong>.<br><br>
+          If it didn't open automatically, please email us directly at <a href="mailto:connect@wynlife.com.au">connect@wynlife.com.au</a>.
         </div>
 
         <p style="font-size:0.78rem;color:var(--gray);margin-top:16px;line-height:1.6;">
@@ -490,7 +490,7 @@ permalink: /pray/
   <div class="footer-bottom">
     <span>&copy; 2026 WynLife Church. All rights reserved.</span>
     <span>208 Ballan Rd, Wyndham Vale VIC 3024 &middot;
-      <a href="mailto:info@wynlife.com.au" style="color:inherit">info@wynlife.com.au</a>
+      <a href="mailto:connect@wynlife.com.au" style="color:inherit">connect@wynlife.com.au</a>
     </span>
   </div>
 </footer>
@@ -529,7 +529,7 @@ permalink: /pray/
     if (!email || email.indexOf('@') < 0) { showError('Please enter a valid email address.'); return; }
     if (!message)                     { showError('Please enter a message.'); return; }
 
-    var to      = 'info@wynlife.com.au';
+    var to      = 'connect@wynlife.com.au';
     var subject = encodeURIComponent('[WynLife Website] ' + currentType + ' from ' + name);
     var body    = encodeURIComponent(
       'Message Type: ' + currentType + '\r\n' +

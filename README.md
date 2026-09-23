@@ -5,7 +5,7 @@ Official website for **WynLife Church** — a vibrant, multicultural Christian c
 🌐 **Live site:** [https://www.wynlife.com.au](https://www.wynlife.com.au)
 📍 **208 Ballan Rd, Wyndham Vale VIC 3024**
 📞 **+61 457 697 354**
-✉️ **info@wynlife.com.au**
+✉️ **connect@wynlife.com.au**
 
 ---
 
@@ -63,7 +63,7 @@ This is a **pure static website** — no frameworks, no build tools, no dependen
 - **Vanilla JavaScript** — `nav.js` injects the shared nav and footer into every page at runtime
 - **Google Fonts** — Merriweather (headings) + Lato (body)
 - **YouTube embed** — click-to-play on Church Online page
-- **mailto: form** — the contact form on `pray.html` opens the visitor's email client with details pre-filled to `info@wynlife.com.au`
+- **mailto: form** — the contact form on `pray.html` opens the visitor's email client with details pre-filled to `connect@wynlife.com.au`
 
 ---
 
