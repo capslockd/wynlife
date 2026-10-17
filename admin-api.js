@@ -62,7 +62,10 @@ window.WynAdmin = (function () {
                       'Apps Script is deployed with access set to "Anyone".');
     }
     if (!data || data.ok !== true) {
-      throw new Error((data && data.error) || 'The request failed.');
+      var err = new Error((data && data.error) || 'The request failed.');
+      /* Lets a screen react to a particular refusal, e.g. 'stale'. */
+      err.code = (data && data.code) || '';
+      throw err;
     }
     return data;
   }
@@ -145,24 +148,29 @@ window.WynAdmin = (function () {
   }
 
   /* basic / planner / admin stack. "email" — the Email Administrator, who
-     composes the newsletter and nothing else — sits outside that ladder, so
-     it ranks below basic and gets its access from ROLE_CAPS instead.
-     Keep both of these in step with Code.gs. */
-  var ROLE_RANK = { email: 0, basic: 1, planner: 2, admin: 3 };
+     composes the newsletter and nothing else — and "moderator" — the Website
+     Moderator, who edits the public website and nothing else — sit outside
+     that ladder, so they rank below basic and get their access from
+     ROLE_CAPS instead. Keep both of these in step with Code.gs. */
+  var ROLE_RANK = { email: 0, moderator: 0, basic: 1, planner: 2, admin: 3 };
 
   var ROLE_CAPS = {
-    basic:   [],
-    planner: [],
-    admin:   ['newsletter'],
-    email:   ['newsletter']
+    basic:     [],
+    planner:   [],
+    admin:     ['newsletter', 'website'],
+    email:     ['newsletter'],
+    moderator: ['website']
   };
 
   var ROLE_LABELS = {
-    basic:   'Basic',
-    planner: 'Planner',
-    admin:   'Admin',
-    email:   'Email Administrator'
+    basic:     'Basic',
+    planner:   'Planner',
+    admin:     'Admin',
+    email:     'Email Administrator',
+    moderator: 'Website Moderator'
   };
+
+  var ROLES = ['basic', 'planner', 'admin', 'email', 'moderator'];
 
   function hasRole(minRole) {
     var user = getUser();
@@ -233,6 +241,7 @@ window.WynAdmin = (function () {
     hasRole: hasRole,
     can: can,
     roleLabel: roleLabel,
+    ROLES: ROLES,
     esc: esc,
     isoDate: isoDate,
     lastSunday: lastSunday,

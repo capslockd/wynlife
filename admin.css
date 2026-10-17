@@ -2,12 +2,22 @@
    Loaded on top of style.css by /admin/ and /sunday-school-checkin/.
    Uses the same palette variables as the public site.               */
 
+/* style.css sets overflow-x: hidden on html and body to stop sideways
+   scrolling. That also makes body a scroll container that never scrolls,
+   which quietly switches off every position: sticky inside it — the menu
+   bar, the side menu, the previews. clip stops sideways scrolling without
+   that side effect (browsers too old for clip keep style.css's hidden). */
+html, body { overflow-x: clip; }
+
 /* ── Shell ── */
 .adm-wrap {
   max-width: var(--content-max);
   margin: 0 auto;
   padding: 0 var(--side-pad) 80px;
 }
+/* The website editor: a form and a whole page side by side. */
+.adm-wide .adm-wrap,
+.adm-wide .adm-topbar-inner { max-width: 1520px; }
 
 .adm-topbar {
   background: var(--navy);
@@ -78,24 +88,52 @@
 .adm-menu-toggle .adm-menu-toggle-caret { transition: transform 0.2s; }
 .adm-menu-toggle[aria-expanded="true"] .adm-menu-toggle-caret { transform: rotate(180deg); }
 
-/* ── Side menu ── */
+/* ── Side menu ──
+   Dashboard, then one collapsible group per job. Only what the signed-in
+   role can open is listed. A long menu scrolls inside itself rather than
+   running off the bottom of the screen while it is pinned. */
 .adm-menu {
   background: var(--cream);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 0;
+  padding: 6px 0;
   position: sticky;
   top: 90px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
 }
-.adm-menu-group + .adm-menu-group { border-top: 1px solid var(--border); }
+.adm-menu-group { border-top: 1px solid var(--border); }
 .adm-menu-title {
-  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--blue);
-  padding: 16px 20px 8px;
+  background: none;
+  border: 0;
+  padding: 14px 18px 14px 20px;
+  cursor: pointer;
+  text-align: left;
 }
+.adm-menu-title:hover { background: var(--gray-light); }
+.adm-menu-title > span:first-of-type { flex: 1; }
+.adm-menu-title .fa-solid,
+.adm-menu-home .fa-solid { width: 16px; text-align: center; font-size: 0.85rem; color: var(--blue); }
+.adm-menu-caret::before {
+  content: "\25B8";
+  display: inline-block;
+  color: var(--gray);
+  transition: transform 0.15s;
+}
+.adm-menu-group.is-open .adm-menu-caret::before { transform: rotate(90deg); }
+/* Collapsed, a group still shows that the current screen is inside it. */
+.adm-menu-group.has-current:not(.is-open) .adm-menu-title { color: var(--navy); background: var(--white); }
+.adm-menu-items { padding-bottom: 8px; }
 .adm-menu a {
   display: block;
   padding: 9px 20px;
@@ -104,6 +142,16 @@
   text-decoration: none;
   border-left: 3px solid transparent;
 }
+.adm-menu-items a { padding-left: 46px; }
+.adm-menu a.adm-menu-home {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--navy);
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
 .adm-menu a:hover { background: var(--gray-light); }
 .adm-menu a.active {
   border-left-color: var(--gold);
@@ -111,10 +159,8 @@
   font-weight: 700;
   color: var(--navy);
 }
-.adm-menu a.disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
+.adm-menu a:focus-visible,
+.adm-menu-title:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
 /* ── Panels ── */
 .adm-panel {
@@ -575,7 +621,8 @@
   margin-bottom: 8px;
 }
 
-.nl-preview { position: sticky; top: 18px; }
+/* Pinned below the site's menu bar, like the side menu. */
+.nl-preview { position: sticky; top: 90px; }
 .nl-preview-head {
   display: flex;
   align-items: center;
@@ -628,6 +675,341 @@
   .nl-preview iframe { height: 60vh; }
 }
 
+/* ── Website editor ──
+   The form on the left, the real page on the right. A bar with the status
+   and the Publish button stays in view while the form scrolls. */
+.web-bar {
+  position: sticky;
+  top: 75px;
+  z-index: 20;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+.web-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+}
+.web-bar .adm-msg { margin: 10px 0 0; max-height: 40vh; overflow-y: auto; }
+.web-status,
+.web-bar-actions { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
+.web-status .adm-hint,
+.web-saved { margin: 0; }
+.web-saved.is-error { color: #8f2222; font-weight: 700; }
+.adm-btn.is-confirm,
+.adm-btn.is-confirm:hover { background: #8f2222; border-color: #8f2222; color: var(--white); }
+
+.web-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 392px;
+  gap: 24px;
+  align-items: start;
+}
+/* minmax(0, 1fr), as in the newsletter composer: a bare track grows to fit
+   its longest line and pushes the form out past its column. */
+.web-editor {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.web-compose .adm-grid-2 { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+
+.web-editor input[type=text],
+.web-editor select,
+.web-editor textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.web-editor textarea { resize: vertical; }
+/* Anything scrolled to in the form stops below the pinned menu and bar. */
+.web-editor details,
+.web-editor input,
+.web-editor select,
+.web-editor textarea { scroll-margin-top: 170px; }
+.web-editor input:focus,
+.web-editor select:focus,
+.web-editor textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
+}
+.web-big { font-size: 1.05rem !important; font-weight: 700; }
+
+.web-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.web-list-head {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin: 8px 0 -2px;
+}
+
+/* Sections, cards and notices fold away, so a long page reads as an outline. */
+.web-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  min-width: 0;
+}
+.web-item > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--cream);
+  cursor: pointer;
+  list-style: none;
+  min-width: 0;
+}
+.web-item > summary::-webkit-details-marker { display: none; }
+.web-item > summary::before {
+  content: "\25B8";
+  color: var(--blue);
+  transition: transform 0.15s;
+}
+.web-item[open] > summary::before { transform: rotate(90deg); }
+.web-item[open] > summary { border-bottom: 1px solid var(--border); }
+.web-item-kind {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  white-space: nowrap;
+}
+.web-item-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.web-item-pills { display: inline-flex; gap: 6px; }
+.web-item.is-hidden > summary .web-item-title { opacity: 0.55; }
+.web-item-body { padding: 16px 14px; display: grid; gap: 14px; min-width: 0; }
+/* A card or notice inside a section sits a little quieter than the section. */
+.web-item .web-item > summary { background: var(--white); padding: 10px 12px; }
+
+.web-tools { display: inline-flex; gap: 4px; margin-left: auto; flex: 0 0 auto; }
+.web-tool {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--navy);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.web-tool:hover:not([disabled]) { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.web-tool.web-remove:hover:not([disabled]) { background: #8f2222; border-color: #8f2222; }
+.web-tool[disabled] { opacity: 0.35; cursor: default; }
+.web-tool:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+.web-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.web-group > legend {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--navy);
+  padding: 0 6px;
+}
+.web-row { display: grid; gap: 8px; align-items: start; min-width: 0; }
+.web-detail { grid-template-columns: 116px minmax(0, 0.8fr) minmax(0, 1.4fr) auto; }
+.web-button-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 150px auto; }
+.web-photo-row { grid-template-columns: minmax(0, 1fr) auto; }
+.web-add { justify-self: start; }
+.web-adds { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+.web-flags { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.web-flags .adm-check + .adm-check { margin-top: 0; }
+.web-note {
+  background: #f3f7fc;
+  border: 1px solid #d6e3f3;
+  border-radius: var(--radius);
+  color: var(--navy);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  padding: 10px 12px;
+}
+.web-note-block { padding: 14px 16px; }
+.web-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  display: grid;
+  gap: 16px;
+}
+.web-yt { font-size: 0.88rem; color: var(--gray); line-height: 1.7; margin-top: -6px; }
+
+.web-image-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: start; }
+.web-thumb {
+  width: 120px;
+  height: 84px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--gray-light);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.web-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.web-thumb span { font-size: 0.72rem; color: var(--gray); text-align: center; padding: 4px; }
+.web-image-fields { display: grid; gap: 8px; min-width: 0; }
+.web-image-fields .adm-hint { margin: 0; }
+.web-image-fields .adm-hint:empty { display: none; }
+.web-image-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.web-upload { margin: 0; cursor: pointer; }
+
+.web-list-msg { margin: 8px 0 0 18px; }
+.web-live { margin-top: 8px; }
+
+/* Removed something far down the form: the Undo is at the foot of the window. */
+.web-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 0.92rem;
+  padding: 10px 12px 10px 18px;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+}
+.web-toast[hidden] { display: none; }
+.web-toast .adm-btn.secondary { color: var(--white); border-color: rgba(255,255,255,0.6); }
+.web-toast .adm-btn.secondary:hover { background: var(--white); color: var(--navy); }
+.web-h3 {
+  font-family: 'Merriweather', serif;
+  color: var(--navy);
+  font-size: 1.05rem;
+  margin: 30px 0 10px;
+}
+.web-steps { color: var(--gray); line-height: 1.9; font-size: 0.93rem; padding-left: 22px; max-width: 680px; margin-bottom: 18px; }
+
+/* ── Website preview ──
+   The live page in a frame, at a phone's real width or a computer's width
+   scaled down to fit. Full Screen lifts it over the whole window. */
+.web-preview { position: sticky; top: 150px; min-width: 0; }
+.web-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  color: var(--navy);
+}
+.web-preview-head strong { margin-right: auto; }
+.web-preview-head select {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+.web-devices { display: flex; gap: 6px; flex-wrap: wrap; }
+.web-devices .adm-btn.is-on { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.web-frame-box {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 260px);
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--white);
+}
+.web-frame-box iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  background: var(--white);
+  transform-origin: top left;
+}
+.web-frame-note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  background: var(--cream);
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+.web-frame-note[hidden] { display: none; }
+.web-preview + .adm-hint,
+.web-preview > .adm-hint { margin-top: 8px; }
+.web-preview.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--white);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.web-preview.is-full .web-frame-box { flex: 1; height: auto; min-height: 0; }
+body.web-full-open { overflow: hidden; }
+
+@media (max-width: 1100px) {
+  .web-compose { grid-template-columns: minmax(0, 1fr); }
+  .web-preview { position: static; }
+  .web-frame-box { height: 70vh; }
+}
+
+@media (max-width: 700px) {
+  /* Icon and tools on one line, then the label, then the details. */
+  .web-detail { grid-template-columns: minmax(0, 1fr) auto; }
+  .web-detail > select { grid-column: 1; grid-row: 1; }
+  .web-detail > .web-tools { grid-column: 2; grid-row: 1; }
+  .web-detail > input { grid-column: 1 / -1; grid-row: 2; }
+  .web-detail > textarea { grid-column: 1 / -1; grid-row: 3; }
+  .web-detail + .web-detail { border-top: 1px dashed var(--border); padding-top: 10px; }
+  .web-button-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .web-button-row > input:first-child { grid-column: 1; grid-row: 1; }
+  .web-button-row > .web-tools { grid-column: 2; grid-row: 1; }
+  .web-button-row > input[list] { grid-column: 1 / -1; grid-row: 2; }
+  .web-button-row > select { grid-column: 1 / -1; grid-row: 3; }
+}
+
 /* ── Print: reports only ── */
 @media print {
   .main-nav, .mobile-nav, .adm-menu, .adm-topbar, .adm-toolbar,
@@ -649,9 +1031,14 @@
 
   /* The sidebar becomes a drawer opened by the toggle above it. */
   .adm-menu-toggle { display: flex; }
-  .adm-menu { position: static; display: none; }
+  .adm-menu { position: static; display: none; max-height: none; overflow: visible; }
   .adm-menu.is-open { display: block; }
   .adm-menu a { padding: 13px 18px; font-size: 1rem; }
+  .adm-menu-items a { padding-left: 44px; }
+  .adm-menu-title { padding: 15px 18px; }
+
+  /* Pinned under a phone's menu bar, the editor bar would hide too much. */
+  .web-bar { position: static; }
 
   .adm-topbar { padding: 14px var(--side-pad); }
   .adm-topbar-inner { gap: 10px; }
@@ -708,4 +1095,8 @@
   .kiosk h1 { font-size: 1.4rem; }
   .kiosk-kid { gap: 10px; padding: 12px 12px; }
   .kiosk-kid .name { font-size: 1rem; }
+
+  .web-item-kind { display: none; }
+  .web-image-row { grid-template-columns: minmax(0, 1fr); }
+  .web-thumb { width: 100%; height: 150px; }
 }

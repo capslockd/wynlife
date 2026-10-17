@@ -16,59 +16,57 @@
   var elMenuToggle  = document.getElementById('admMenuToggle');
   var elMenuCurrent = document.getElementById('admMenuCurrent');
 
-  /* ── Menu definition ─────────────────────────────────────────────────── */
+  /* ── Screens and the menu ────────────────────────────────────────────
+     Every screen is a route, opened either by a minimum role on the basic /
+     planner / admin ladder or by a capability (newsletter, website) for the
+     roles that sit outside it. The menu groups the routes by job; anything a
+     role cannot open is left out rather than greyed out, and a group with
+     nothing left in it disappears — so each role sees only its own tools.
+     Routes not in the menu (users/new, members/new) open the same screen
+     with its "Add" form already showing.                                */
+
+  var ROUTES = {
+    '':                       { view: viewDashboard,            label: 'Dashboard' },
+    'members':                { view: viewMembers,              label: 'Members',              role: 'planner' },
+    'members/new':            { view: viewMembers,              label: 'Members',              role: 'planner', arg: 'new' },
+    'tracking/attendance':    { view: viewSundayAttendance,     label: 'Sunday Attendance',    role: 'planner' },
+    'tracking/sunday-school': { view: viewSetupSundaySchool,    label: 'Setup Sunday School',  role: 'planner' },
+    'reports/attendance':     { view: viewAttendanceReport,     label: 'Attendance Report',    role: 'basic' },
+    'reports/sunday-school':  { view: viewSundaySchoolReport,   label: 'Sunday School Report', role: 'basic' },
+    'newsletter/compose':     { view: viewNewsletterCompose,    label: 'Compose Newsletter',   cap: 'newsletter' },
+    'newsletter':             { view: viewNewsletterHistory,    label: 'Newsletter History',   cap: 'newsletter' },
+    'newsletter/recipients':  { view: viewNewsletterRecipients, label: 'Recipients',           cap: 'newsletter' },
+    'website/home':           { view: viewWebsitePage,          label: 'Home Page',            cap: 'website', arg: 'home' },
+    'website/gatherings':     { view: viewWebsitePage,          label: 'Gatherings',           cap: 'website', arg: 'gatherings' },
+    'website/online':         { view: viewWebsitePage,          label: 'Church Online',        cap: 'website', arg: 'online' },
+    'website/whatson':        { view: viewWebsitePage,          label: 'What’s On',       cap: 'website', arg: 'whatson' },
+    'website/history':        { view: viewWebsiteHistory,       label: 'Publish History',      cap: 'website' },
+    'users':                  { view: viewUsers,                label: 'Users & Roles',        role: 'admin' },
+    'users/new':              { view: viewUsers,                label: 'Users & Roles',        role: 'admin', arg: 'new' },
+    'newsletter/settings':    { view: viewNewsletterSettings,   label: 'Email Settings',       role: 'admin' },
+    'website/settings':       { view: viewWebsiteSettings,      label: 'Website Publishing',   role: 'admin' }
+  };
 
   var MENU = [
-    { title: 'Manage', items: [
-      { route: 'users/new',    label: 'Add New User',   role: 'admin' },
-      { route: 'members/new',  label: 'Add New Member', role: 'planner' },
-      { route: 'users',        label: 'Modify User',    role: 'admin' },
-      { route: 'members',      label: 'Modify Member',  role: 'planner' }
+    { title: 'Members & Sundays', icon: 'fa-people-group', routes: [
+      'members', 'tracking/attendance', 'tracking/sunday-school',
+      'reports/attendance', 'reports/sunday-school'
     ] },
-    { title: 'Reports', items: [
-      { route: 'reports/attendance',    label: 'Attendance Report',    role: 'basic' },
-      { route: 'reports/sunday-school', label: 'Sunday School Report', role: 'basic' }
+    { title: 'Newsletter', icon: 'fa-envelope-open-text', routes: [
+      'newsletter/compose', 'newsletter', 'newsletter/recipients'
     ] },
-    { title: 'Tracking', items: [
-      { route: 'tracking/attendance',    label: 'Sunday Attendance',   role: 'planner' },
-      { route: 'tracking/sunday-school', label: 'Setup Sunday School', role: 'planner' }
+    { title: 'Website', icon: 'fa-globe', routes: [
+      'website/home', 'website/gatherings', 'website/online', 'website/whatson', 'website/history'
     ] },
-    { title: 'Newsletter', items: [
-      { route: 'newsletter/compose',    label: 'Compose Newsletter', cap: 'newsletter' },
-      { route: 'newsletter',            label: 'Newsletter History', cap: 'newsletter' },
-      { route: 'newsletter/recipients', label: 'Recipients',         cap: 'newsletter' },
-      { route: 'newsletter/settings',   label: 'Email Settings',     role: 'admin' }
+    { title: 'Settings', icon: 'fa-gear', routes: [
+      'users', 'newsletter/settings', 'website/settings'
     ] }
   ];
 
-  var VIEWS = {
-    '':                          viewDashboard,
-    'users/new':                 viewAddUser,
-    'users':                     viewModifyUser,
-    'members/new':               viewAddMember,
-    'members':                   viewModifyMember,
-    'tracking/attendance':       viewSundayAttendance,
-    'tracking/sunday-school':    viewSetupSundaySchool,
-    'reports/attendance':        viewAttendanceReport,
-    'reports/sunday-school':     viewSundaySchoolReport,
-    'newsletter':                viewNewsletterHistory,
-    'newsletter/compose':        viewNewsletterCompose,
-    'newsletter/recipients':     viewNewsletterRecipients,
-    'newsletter/settings':       viewNewsletterSettings
-  };
-
-  var ROUTE_ROLE = {};
-  var ROUTE_CAP  = {};
-  MENU.forEach(function (group) {
-    group.items.forEach(function (item) {
-      if (item.role) ROUTE_ROLE[item.route] = item.role;
-      if (item.cap) ROUTE_CAP[item.route] = item.cap;
-    });
-  });
-
-  /** Every menu entry is gated either by a minimum role or by a capability. */
-  function allowed(item) {
-    return item.cap ? A.can(item.cap) : A.hasRole(item.role);
+  /** Every route is gated either by a minimum role or by a capability. */
+  function allowed(def) {
+    if (def.cap) return A.can(def.cap);
+    return def.role ? A.hasRole(def.role) : true;
   }
 
   /* ── Boot ────────────────────────────────────────────────────────────── */
@@ -78,29 +76,47 @@
       elMenuToggle.addEventListener('click', function () {
         setMenuOpen(!elMenu.classList.contains('is-open'));
       });
-      /* Any menu tap navigates, so close the drawer behind it. */
-      elMenu.addEventListener('click', function (e) {
-        if (e.target.closest('a')) setMenuOpen(false);
-      });
     }
+    elMenu.addEventListener('click', function (e) {
+      var title = e.target.closest('[data-menu-group]');
+      if (title) {
+        var name = title.getAttribute('data-menu-group');
+        openGroups[name] = !openGroups[name];
+        renderMenu();
+        return;
+      }
+      /* Any menu tap navigates, so close the drawer behind it. */
+      if (e.target.closest('a')) setMenuOpen(false);
+    });
     if (A.getUser() && A.getToken()) {
       showApp();
     } else {
       showLogin();
     }
     window.addEventListener('hashchange', route);
+    window.addEventListener('beforeunload', function (e) {
+      if (webHasUnsaved()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
   }
 
   function showLogin(message) {
     setMenuOpen(false);
+    /* The next person to sign in may have a different role, and so a different menu. */
+    openGroups = {};
+    menuSeeded = false;
+    menuRouteShown = null;
+    document.body.classList.remove('adm-wide');
     elApp.hidden = true;
     elLogin.hidden = false;
     elWho.innerHTML = '';
     elLogin.innerHTML =
       '<div class="adm-login">' +
         '<h2>Church Admin</h2>' +
-        '<p class="adm-sub">Sign in to manage members, record Sunday attendance and ' +
-        'run weekly reports.</p>' +
+        '<p class="adm-sub">Sign in to manage members, record Sunday attendance, send the ' +
+        'newsletter and keep the website up to date.</p>' +
         '<div class="adm-msg error" id="loginMsg">' + esc(message || '') + '</div>' +
         '<form class="adm-form" id="loginForm" autocomplete="on">' +
           field('Email', '<input type="email" id="loginEmail" required autocomplete="username">') +
@@ -157,33 +173,73 @@
     elMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
-  /** The menu label for a route, used by the mobile toggle button. */
-  function routeLabel(route) {
-    var label = 'Dashboard';
-    MENU.forEach(function (group) {
-      group.items.forEach(function (item) {
-        if (item.route === route) label = item.label;
-      });
-    });
-    return label;
+  /** The menu entry a route belongs to: users/new is Users, a compose link is Compose. */
+  function menuRoute(route) {
+    var name = route;
+    while (name && !MENU.some(function (g) { return g.routes.indexOf(name) !== -1; })) {
+      var cut = name.lastIndexOf('/');
+      name = cut > 0 ? name.slice(0, cut) : '';
+    }
+    return name;
+  }
+
+  /* Which menu groups are expanded. The group holding the current screen
+     opens on arrival; the others stay as they were left. Someone who can see
+     only one or two groups gets them all open — there is nothing to tidy. */
+  var openGroups = {};
+  var menuSeeded = false;
+  var menuRouteShown = null;
+
+  function visibleGroups() {
+    return MENU.map(function (group) {
+      return {
+        title: group.title,
+        icon: group.icon,
+        routes: group.routes.filter(function (r) { return allowed(ROUTES[r]); })
+      };
+    }).filter(function (group) { return group.routes.length > 0; });
   }
 
   function renderMenu() {
-    var current = currentRoute();
-    if (elMenuCurrent) elMenuCurrent.textContent = routeLabel(current);
-    elMenu.innerHTML = MENU.map(function (group) {
-      var links = group.items.map(function (item) {
-        var ok = allowed(item);
-        return '<a href="#/' + item.route + '"' +
-          ' class="' + (item.route === current ? 'active ' : '') + (ok ? '' : 'disabled') + '"' +
-          (ok ? '' : ' title="' + (item.cap
-            ? 'Not available to your role'
-            : 'Requires the ' + item.role + ' role') + '" aria-disabled="true"') +
-          '>' + esc(item.label) + '</a>';
+    var current = menuRoute(currentRoute());
+    var groups = visibleGroups();
+    if (!menuSeeded) {
+      menuSeeded = true;
+      if (groups.length <= 2) groups.forEach(function (g) { openGroups[g.title] = true; });
+    }
+    /* Only on arriving at a screen — a group someone has just closed stays closed. */
+    if (current !== menuRouteShown) {
+      menuRouteShown = current;
+      groups.forEach(function (g) {
+        if (g.routes.indexOf(current) !== -1) openGroups[g.title] = true;
+      });
+    }
+    if (elMenuCurrent) elMenuCurrent.textContent = ROUTES[current] ? ROUTES[current].label : 'Dashboard';
+
+    elMenu.innerHTML =
+      '<a href="#/" class="adm-menu-home' + (current === '' ? ' active' : '') + '"' +
+        (current === '' ? ' aria-current="page"' : '') + '>' +
+        '<i class="fa-solid fa-house" aria-hidden="true"></i><span>Dashboard</span></a>' +
+      groups.map(function (group, i) {
+        var open = !!openGroups[group.title];
+        var holdsCurrent = group.routes.indexOf(current) !== -1;
+        return '<div class="adm-menu-group' + (open ? ' is-open' : '') +
+            (holdsCurrent ? ' has-current' : '') + '">' +
+          '<button type="button" class="adm-menu-title" data-menu-group="' + esc(group.title) + '"' +
+            ' aria-expanded="' + open + '" aria-controls="admMenuGroup' + i + '">' +
+            '<i class="fa-solid ' + group.icon + '" aria-hidden="true"></i>' +
+            '<span>' + esc(group.title) + '</span>' +
+            '<span class="adm-menu-caret" aria-hidden="true"></span>' +
+          '</button>' +
+          '<div class="adm-menu-items" id="admMenuGroup' + i + '"' + (open ? '' : ' hidden') + '>' +
+            group.routes.map(function (r) {
+              return '<a href="#/' + r + '"' +
+                (r === current ? ' class="active" aria-current="page"' : '') + '>' +
+                esc(ROUTES[r].label) + '</a>';
+            }).join('') +
+          '</div>' +
+        '</div>';
       }).join('');
-      return '<div class="adm-menu-group"><div class="adm-menu-title">' +
-        esc(group.title) + '</div>' + links + '</div>';
-    }).join('');
   }
 
   /* ── Routing ─────────────────────────────────────────────────────────── */
@@ -195,34 +251,36 @@
   function route() {
     if (!A.getUser()) { showLogin(); return; }
     setMenuOpen(false);
+    leaveWebsiteEditor();
     var name = currentRoute();
-    var view = VIEWS[name];
+    var def = ROUTES[name];
     var param = '';
     /* Routes may carry one trailing id, e.g. #/newsletter/compose/NLT-0007. */
-    if (!view) {
+    if (!def) {
       var cut = name.lastIndexOf('/');
-      if (cut > 0 && VIEWS[name.slice(0, cut)]) {
+      if (cut > 0 && ROUTES[name.slice(0, cut)]) {
         param = decodeURIComponent(name.slice(cut + 1));
         name = name.slice(0, cut);
-        view = VIEWS[name];
+        def = ROUTES[name];
       }
     }
     renderMenu();
-    if (!view) {
+    if (!def) {
       elView.innerHTML = panel('Page not found',
         'That admin screen does not exist. Pick something from the menu.');
       return;
     }
-    var neededCap = ROUTE_CAP[name];
-    var neededRole = ROUTE_ROLE[name];
-    if ((neededCap && !A.can(neededCap)) || (neededRole && !A.hasRole(neededRole))) {
+    if (!allowed(def)) {
       elView.innerHTML = panel('Not available to your role',
         'Your role (<strong>' + esc(A.roleLabel(A.getUser().role)) + '</strong>) does not ' +
         'have access to this screen. Ask an administrator if you need it.');
       return;
     }
+    /* The website editor puts a form and a whole page side by side, so it
+       uses the width a large screen has to offer. */
+    document.body.classList.toggle('adm-wide', def.view === viewWebsitePage);
     window.scrollTo(0, 0);
-    view(param);
+    def.view(def.arg !== undefined ? def.arg : param);
   }
 
   /* ── Small render helpers ────────────────────────────────────────────── */
@@ -353,6 +411,19 @@
           'reopen last week’s and start from it.</li>' +
       '</ol>';
 
+    var websiteWalkthrough =
+      '<h3 style="font-family:\'Merriweather\',serif;color:var(--navy);font-size:1.1rem;margin:8px 0 10px;">' +
+      'Keeping the website up to date</h3>' +
+      '<ol style="color:var(--gray);line-height:1.9;font-size:0.95rem;padding-left:22px;max-width:620px;">' +
+        '<li><a href="#/website/online">Church Online</a> — paste this Sunday’s livestream link.</li>' +
+        '<li><a href="#/website/whatson">What’s On</a> — add this week’s announcements, and switch ' +
+          'off the ones that have passed.</li>' +
+        '<li>Check the preview beside the form, then press <strong>Publish</strong>. The live site ' +
+          'updates in about a minute.</li>' +
+        '<li><a href="#/website/history">Publish History</a> — every publish is kept, and any of ' +
+          'them can be put back.</li>' +
+      '</ol>';
+
     elView.innerHTML = panel(
       'Welcome, ' + esc((user.name || user.email).split(' ')[0]),
       'This is the WynLife Church management console. Everything you record here ' +
@@ -365,40 +436,60 @@
           esc(A.roleLabel(user.role)) + '</div><div class="k">Your role</div></div>' +
       '</div>' +
       (A.hasRole('basic') ? sundayWalkthrough : '') +
-      (A.can('newsletter') ? newsletterWalkthrough : ''));
+      (A.can('newsletter') ? newsletterWalkthrough : '') +
+      (A.can('website') ? websiteWalkthrough : ''));
   }
 
-  /* ── Manage: Add New User ────────────────────────────────────────────── */
+  /* ── Settings: Users & Roles ─────────────────────────────────────────── */
 
-  function viewAddUser() {
-    elView.innerHTML = panel('Add New User',
-      'Create a login for the admin console. <strong>Basic</strong> can view reports, ' +
-      '<strong>Planner</strong> can also manage members and record attendance, ' +
-      '<strong>Admin</strong> can do everything including managing users. ' +
-      '<strong>Email Administrator</strong> sits on its own: it can compose and send the ' +
-      'newsletter and nothing else — no members, no attendance, no reports.',
-      '<div class="adm-msg" id="userMsg"></div>' +
-      '<form class="adm-form" id="addUserForm">' +
-        '<div class="adm-grid-2">' +
-          field('Email', '<input type="email" id="nuEmail" required autocomplete="off">') +
-          field('Display name', '<input type="text" id="nuName" autocomplete="off">') +
-        '</div>' +
-        '<div class="adm-grid-2">' +
-          field('Password', '<input type="password" id="nuPassword" required autocomplete="new-password">',
-                'At least 8 characters.') +
-          field('Role',
-            '<select id="nuRole">' +
-              '<option value="basic">Basic — reports only</option>' +
-              '<option value="planner">Planner — members &amp; attendance</option>' +
-              '<option value="admin">Admin — full access</option>' +
-              '<option value="email">Email Administrator — newsletter only</option>' +
-            '</select>') +
-        '</div>' +
-        '<div class="adm-actions">' +
-          '<button class="adm-btn" type="submit" id="nuSave">Create User</button>' +
-          '<a class="adm-btn secondary" href="#/users">View all users</a>' +
-        '</div>' +
-      '</form>');
+  var ROLE_NOTES = {
+    basic:     'reports only',
+    planner:   'members & attendance',
+    admin:     'full access',
+    email:     'newsletter only',
+    moderator: 'website only'
+  };
+
+  function roleOptions(selected) {
+    return A.ROLES.map(function (role) {
+      return '<option value="' + role + '"' + (role === selected ? ' selected' : '') + '>' +
+        esc(A.roleLabel(role) + ' — ' + ROLE_NOTES[role]) + '</option>';
+    }).join('');
+  }
+
+  /** Lists every login; "new" opens the Add form above the list. */
+  function viewUsers(arg) {
+    loading('Loading users…');
+    return A.call('listUsers').then(function (data) {
+      renderUserList(data.users);
+      if (arg === 'new') renderUserAdd();
+    }).catch(fail);
+  }
+
+  function renderUserAdd() {
+    var slot = document.getElementById('userEditSlot');
+    slot.innerHTML =
+      '<div class="adm-panel" style="background:var(--cream);margin-bottom:22px;">' +
+        '<h2 style="font-size:1.15rem;">Add a user</h2>' +
+        '<form class="adm-form" id="addUserForm">' +
+          '<div class="adm-grid-2">' +
+            field('Email', '<input type="email" id="nuEmail" required autocomplete="off">') +
+            field('Display name', '<input type="text" id="nuName" autocomplete="off">') +
+          '</div>' +
+          '<div class="adm-grid-2">' +
+            field('Password', '<input type="password" id="nuPassword" required autocomplete="new-password">',
+                  'At least 8 characters.') +
+            field('Role', '<select id="nuRole">' + roleOptions('basic') + '</select>') +
+          '</div>' +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="nuSave">Create User</button>' +
+            '<button class="adm-btn secondary" type="button" id="nuCancel">Cancel</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+    document.getElementById('nuEmail').focus();
+
+    on('nuCancel', 'click', function () { slot.innerHTML = ''; });
 
     on('addUserForm', 'submit', function (e) {
       e.preventDefault();
@@ -409,21 +500,12 @@
         password: document.getElementById('nuPassword').value,
         role: val('nuRole')
       }).then(function (data) {
-        document.getElementById('addUserForm').reset();
-        msg('userMsg', data.message, 'ok');
+        return viewUsers().then(function () { msg('userMsg', data.message, 'ok'); });
       }).catch(function (err) {
+        busy('nuSave', false);
         msg('userMsg', err.message, 'error');
-      }).then(function () { busy('nuSave', false); });
+      });
     });
-  }
-
-  /* ── Manage: Modify User ─────────────────────────────────────────────── */
-
-  function viewModifyUser() {
-    loading('Loading users…');
-    A.call('listUsers').then(function (data) {
-      renderUserList(data.users);
-    }).catch(fail);
   }
 
   function renderUserList(users) {
@@ -441,15 +523,24 @@
       '</tr>';
     }).join('');
 
-    elView.innerHTML = panel('Modify User',
-      'Change a role, rename someone, reset a password, or disable an account. ' +
-      'At least one active admin must always remain.',
+    elView.innerHTML = panel('Users &amp; Roles',
+      'Everyone who can sign in to this console. <strong>Basic</strong> can view reports, ' +
+      '<strong>Planner</strong> can also manage members and record attendance, and ' +
+      '<strong>Admin</strong> can do everything, including managing users. Two roles sit on ' +
+      'their own: an <strong>Email Administrator</strong> composes and sends the newsletter, and ' +
+      'a <strong>Website Moderator</strong> edits and publishes the website — and neither can do ' +
+      'anything else. At least one active admin must always remain.',
       '<div class="adm-msg" id="userMsg"></div>' +
+      '<div class="adm-actions" style="margin-bottom:18px;">' +
+        '<button class="adm-btn" type="button" id="userAdd">Add a User</button>' +
+      '</div>' +
       '<div id="userEditSlot"></div>' +
       '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
         '<th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Last login</th><th></th>' +
       '</tr></thead><tbody>' + (rows || '<tr><td colspan="6">No users yet.</td></tr>') +
       '</tbody></table></div>');
+
+    on('userAdd', 'click', renderUserAdd);
 
     elView.querySelectorAll('[data-edit-user]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -471,14 +562,7 @@
             field('Display name', '<input type="text" id="euName" value="' + esc(user.name) + '">') +
           '</div>' +
           '<div class="adm-grid-2">' +
-            field('Role',
-              '<select id="euRole">' +
-                ['basic', 'planner', 'admin', 'email'].map(function (role) {
-                  return '<option value="' + role + '"' +
-                    (role === user.role ? ' selected' : '') + '>' +
-                    esc(A.roleLabel(role)) + '</option>';
-                }).join('') +
-              '</select>') +
+            field('Role', '<select id="euRole">' + roleOptions(user.role) + '</select>') +
             field('New password',
               '<input type="password" id="euPassword" autocomplete="new-password">',
               'Leave blank to keep the current password.') +
@@ -506,8 +590,7 @@
         password: document.getElementById('euPassword').value,
         active: checked('euActive')
       }).then(function (data) {
-        viewModifyUser();
-        setTimeout(function () { msg('userMsg', data.message, 'ok'); }, 0);
+        return viewUsers().then(function () { msg('userMsg', data.message, 'ok'); });
       }).catch(function (err) {
         busy('euSave', false);
         msg('userMsg', err.message, 'error');
@@ -515,7 +598,7 @@
     });
   }
 
-  /* ── Manage: Add New Member ──────────────────────────────────────────── */
+  /* ── Members & Sundays: Members ──────────────────────────────────────── */
 
   function memberFormFields(member) {
     member = member || {};
@@ -577,50 +660,61 @@
     };
   }
 
-  function viewAddMember() {
-    elView.innerHTML = panel('Add New Member',
-      'Adds a church goer to the <strong>Member Data</strong> sheet. Tick ' +
-      '<em>Sunday Schooler</em> for children who attend Sunday School — the ' +
-      'Sunday School roster is built from that flag.',
-      '<div class="adm-msg" id="memberMsg"></div>' +
-      '<form class="adm-form" id="addMemberForm">' +
-        memberFormFields(null) +
-        '<div class="adm-actions">' +
-          '<button class="adm-btn" type="submit" id="mSave">Add Member</button>' +
-          '<a class="adm-btn secondary" href="#/members">View all members</a>' +
-        '</div>' +
-      '</form>');
+  /** Lists every member; "new" opens the Add form above the list. */
+  function viewMembers(arg) {
+    loading('Loading members…');
+    return A.call('listMembers').then(function (data) {
+      renderMemberList(data.members, '');
+      if (arg === 'new') renderMemberAdd();
+    }).catch(fail);
+  }
+
+  /* Stays open after each save, with the form cleared, so a family can be
+     entered one person after another. */
+  function renderMemberAdd() {
+    var slot = document.getElementById('memberEditSlot');
+    slot.innerHTML =
+      '<div class="adm-panel" style="background:var(--cream);margin-bottom:22px;">' +
+        '<h2 style="font-size:1.15rem;">Add a member</h2>' +
+        '<p class="adm-sub">Adds a church goer to the <strong>Member Data</strong> sheet. Tick ' +
+        '<em>Sunday Schooler</em> for children who attend Sunday School — the Sunday School ' +
+        'roster is built from that flag.</p>' +
+        '<div class="adm-msg" id="memberAddMsg"></div>' +
+        '<form class="adm-form" id="addMemberForm">' +
+          memberFormFields(null) +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="mSave">Add Member</button>' +
+            '<button class="adm-btn secondary" type="button" id="mCancel">Close</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+    document.getElementById('mFirst').focus();
+
+    on('mCancel', 'click', function () { slot.innerHTML = ''; });
 
     on('addMemberForm', 'submit', function (e) {
       e.preventDefault();
       busy('mSave', true, 'Saving…');
       A.call('addMember', readMemberForm()).then(function (data) {
-        document.getElementById('addMemberForm').reset();
-        document.getElementById('mActive').checked = true;
-        msg('memberMsg', data.message, 'ok');
+        return viewMembers('new').then(function () { msg('memberAddMsg', data.message, 'ok'); });
       }).catch(function (err) {
-        msg('memberMsg', err.message, 'error');
-      }).then(function () { busy('mSave', false); });
+        busy('mSave', false);
+        msg('memberAddMsg', err.message, 'error');
+      });
     });
   }
 
-  /* ── Manage: Modify Member ───────────────────────────────────────────── */
-
-  function viewModifyMember() {
-    loading('Loading members…');
-    A.call('listMembers').then(function (data) {
-      renderMemberList(data.members, '');
-    }).catch(fail);
-  }
-
   function renderMemberList(members, query) {
-    elView.innerHTML = panel('Modify Member',
-      'Search by name or family group, then edit the record.',
+    elView.innerHTML = panel('Members',
+      'Everyone on the <strong>Member Data</strong> sheet. Search by name, family group or ' +
+      'suburb, then edit the record.',
       '<div class="adm-msg" id="memberMsg"></div>' +
       '<div id="memberEditSlot"></div>' +
       '<div class="adm-toolbar">' +
         field('Search', '<input type="search" id="memberSearch" placeholder="Name, family group or suburb" value="' +
           esc(query || '') + '">') +
+        '<div class="adm-field">' +
+          '<button class="adm-btn" type="button" id="memberAdd">Add a Member</button></div>' +
         '<div class="adm-field">' +
           '<span class="adm-hint" id="memberCount" style="margin:0;"></span></div>' +
       '</div>' +
@@ -668,6 +762,7 @@
     }
 
     on('memberSearch', 'input', draw);
+    on('memberAdd', 'click', renderMemberAdd);
     draw();
   }
 
@@ -696,8 +791,7 @@
       var payload = readMemberForm();
       payload.memberId = member.memberId;
       A.call('updateMember', payload).then(function (data) {
-        viewModifyMember();
-        setTimeout(function () { msg('memberMsg', data.message, 'ok'); }, 0);
+        return viewMembers().then(function () { msg('memberMsg', data.message, 'ok'); });
       }).catch(function (err) {
         busy('emSave', false);
         msg('memberMsg', err.message, 'error');
@@ -822,7 +916,7 @@
       document.getElementById('attRows').innerHTML = shown.length
         ? html
         : '<tr><td colspan="5">Nobody matches that search. Add them under ' +
-          '<a href="#/members/new">Add New Member</a>.</td></tr>';
+          '<a href="#/members/new">Add a Member</a>.</td></tr>';
 
       document.getElementById('attRows').querySelectorAll('[data-att]').forEach(function (box) {
         box.addEventListener('change', function () {
@@ -1888,13 +1982,13 @@
   }
 
   /** Re-encodes at falling quality until it comes in under the size target. */
-  function encode(canvas, transparent) {
+  function encode(canvas, transparent, targetBytes) {
     if (transparent) return toBlob(canvas, 'image/png');
     var step = 0;
     function attempt() {
       return toBlob(canvas, 'image/jpeg', NL_JPEG_QUALITY[step]).then(function (blob) {
         step += 1;
-        if (blob.size <= NL_TARGET_BYTES || step >= NL_JPEG_QUALITY.length) return blob;
+        if (blob.size <= targetBytes || step >= NL_JPEG_QUALITY.length) return blob;
         return attempt();
       });
     }
@@ -1907,8 +2001,13 @@
       : Math.max(1, Math.round(bytes / 1024)) + ' KB';
   }
 
-  /** Resolves to { base64, mimeType, name, note } ready to hand to the API. */
-  function prepareImage(file, columnWidth) {
+  /**
+   * Resolves to { base64, mimeType, name, note } ready to hand to the API.
+   * `size` is { maxEdge, targetBytes, columnWidth }: the newsletter's are set
+   * by its 600px column, the website's by the page (see WEB_IMAGE_SIZES).
+   */
+  function prepareImage(file, size) {
+    var columnWidth = size.columnWidth;
     if (NL_PASS_THROUGH.indexOf(file.type) !== -1) {
       return readAsBase64(file).then(function (base64) {
         return {
@@ -1925,7 +2024,7 @@
       var height = source.height || source.naturalHeight;
       if (!width || !height) throw new Error('That image has no size the browser can read.');
 
-      var scale = Math.min(1, NL_MAX_EDGE / Math.max(width, height));
+      var scale = Math.min(1, size.maxEdge / Math.max(width, height));
       var targetW = Math.max(1, Math.round(width * scale));
       var targetH = Math.max(1, Math.round(height * scale));
 
@@ -1935,7 +2034,7 @@
 
       var transparent = usesTransparency(canvas);
 
-      return encode(canvas, transparent).then(function (blob) {
+      return encode(canvas, transparent, size.targetBytes).then(function (blob) {
         return readAsBase64(blob).then(function (base64) {
           var notes = [];
           if (scale < 1) {
@@ -1974,9 +2073,13 @@
     say('Preparing ' + file.name + '…');
 
     /* The Editorial design insets its pictures; the other two run full bleed. */
-    var columnWidth = nlDraft.design === 'editorial' ? 532 : 600;
+    var size = {
+      maxEdge: NL_MAX_EDGE,
+      targetBytes: NL_TARGET_BYTES,
+      columnWidth: nlDraft.design === 'editorial' ? 532 : 600
+    };
 
-    prepareImage(file, columnWidth).then(function (ready) {
+    prepareImage(file, size).then(function (ready) {
       say('Uploading… ' + ready.note);
       return A.call('nlUploadImage', {
         name: ready.name,
@@ -2232,7 +2335,7 @@
 
   function viewNewsletterRecipients() {
     loading('Loading the mailing list…');
-    A.call('nlRecipients').then(function (data) {
+    return A.call('nlRecipients').then(function (data) {
       renderRecipients(data, '');
     }).catch(fail);
   }
@@ -2361,8 +2464,7 @@
         groups: val('rcpGroups'),
         notes: val('rcpNotes')
       }).then(function (result) {
-        viewNewsletterRecipients();
-        setTimeout(function () { msg('rcpMsg', result.message, 'ok'); }, 0);
+        return viewNewsletterRecipients().then(function () { msg('rcpMsg', result.message, 'ok'); });
       }).catch(function (err) {
         busy('rcpSave', false);
         msg('rcpMsg', err.message, 'error');
@@ -2401,10 +2503,9 @@
       }).then(function (result) {
         var note = result.message + (result.skipped.length
           ? ' Skipped: ' + result.skipped.slice(0, 5).join(', ') : '');
-        viewNewsletterRecipients();
-        setTimeout(function () {
+        return viewNewsletterRecipients().then(function () {
           msg('rcpMsg', note, result.skipped.length ? 'info' : 'ok');
-        }, 0);
+        });
       }).catch(function (err) {
         busy('rcpImportSave', false);
         msg('rcpMsg', err.message, 'error');
@@ -2416,7 +2517,7 @@
 
   function viewNewsletterSettings() {
     loading('Loading email settings…');
-    A.call('nlSettings').then(function (data) {
+    return A.call('nlSettings').then(function (data) {
       var s = data.settings;
       elView.innerHTML = panel('Email Settings',
         'The newsletter goes out through <strong>Brevo</strong>. The API key is kept in the ' +
@@ -2459,8 +2560,7 @@
           senderEmail: val('nlSenderEmail'),
           replyTo: val('nlReplyTo')
         }).then(function (result) {
-          viewNewsletterSettings();
-          setTimeout(function () { msg('nlSetMsg', result.message, 'ok'); }, 0);
+          return viewNewsletterSettings().then(function () { msg('nlSetMsg', result.message, 'ok'); });
         }).catch(function (err) {
           busy('nlSetSave', false);
           msg('nlSetMsg', err.message, 'error');
@@ -2470,17 +2570,1542 @@
       on('nlSetClear', 'click', function () {
         busy('nlSetClear', true, 'Removing…');
         A.call('nlSaveSettings', { clearApiKey: true }).then(function () {
-          viewNewsletterSettings();
-          setTimeout(function () {
+          return viewNewsletterSettings().then(function () {
             msg('nlSetMsg', 'The Brevo key has been removed. No newsletters can go out ' +
                 'until a new one is saved.', 'info');
-          }, 0);
+          });
         }).catch(function (err) {
           busy('nlSetClear', false);
           msg('nlSetMsg', err.message, 'error');
         });
       });
     }).catch(fail);
+  }
+
+  /* ══ Website ═════════════════════════════════════════════════════════
+     The moderators' corner: the editable parts of the public pages, with the
+     real page beside the form as a live preview, and a Publish button.
+     Drafts save to the sheet as you type. Publishing has the Apps Script
+     write the pages on GitHub (Website.gs), and GitHub Pages rebuilds the
+     site — so the public site stays plain, fast, static HTML.
+
+     What the content looks like, and the HTML it becomes, both live in
+     site-content.js: the preview and the published page are drawn by the
+     same code.                                                          */
+
+  var S = window.WynSite;
+
+  /* How large an uploaded picture may be. A banner spans the whole screen, so
+     it keeps more pixels; everything else sits in a half-width column. */
+  var WEB_IMAGE_SIZES = {
+    hero:  { maxEdge: 2000, targetBytes: 600 * 1024, columnWidth: 1440 },
+    photo: { maxEdge: 1600, targetBytes: 450 * 1024, columnWidth: 600 }
+  };
+
+  var WEB_DEVICES = { desktop: 1280, phone: 390 };
+
+  var WORDS_HINT = 'Leave a blank line between paragraphs. Write **bold**, *italic* or ' +
+                   '[link text](https://…) where you want them.';
+
+  /* Shown beside a section's heading for the kinds that behave differently;
+     an ordinary text-and-picture section needs no label. */
+  var SECTION_KINDS = {
+    feature: '',
+    photo: 'Wide photo',
+    'sunday-school': 'Sunday School',
+    announcements: 'Announcements'
+  };
+
+  var web = {
+    state: null,          // the last webState: every page's draft and live content
+    page: '',             // the page open in the editor
+    draft: null,          // its content, as it is being edited
+    unsaved: false,       // changed since the last save reached the sheet
+    saving: null,         // the save in flight
+    saveTimer: null,
+    previewTimer: null,
+    previewPath: '',
+    device: 'phone',
+    open: new WeakMap(),  // which items are expanded, keyed by the item itself
+    wantFocus: '',        // the item being worked on, for the preview to show
+    lastFocus: '',        // the item the preview last scrolled to
+    removed: null,        // the last item removed, for Undo
+    toastTimer: null,
+    notice: null,         // a message to show when the editor next opens
+    watch: null           // the check for the rebuilt site after a publish
+  };
+
+  function pageInfo(key) {
+    return S.PAGES.filter(function (p) { return p.key === key; })[0];
+  }
+
+  function webHasUnsaved() {
+    return !!(web.page && (web.unsaved || web.saving));
+  }
+
+  function stampText(iso) {
+    return iso ? A.prettyDate(iso) + ', ' + A.prettyTime(iso) : '';
+  }
+
+  /** '9:41 am' today, '12 Oct, 9:41 am' this year, '12 Oct 2025, 9:41 am' before. */
+  function shortStamp(iso, withDay) {
+    if (!iso) return '';
+    if (!withDay && String(iso).slice(0, 10) === A.isoDate(new Date())) return A.prettyTime(iso);
+    var parts = String(iso).slice(0, 10).split('-');
+    var day = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    var opts = { day: 'numeric', month: 'short' };
+    if (day.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return day.toLocaleDateString('en-AU', opts) + ', ' + A.prettyTime(iso);
+  }
+
+  /* ── Reading and writing the draft by path ── */
+
+  function webGet(path) {
+    var node = web.draft;
+    var parts = String(path).split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (node === null || node === undefined) return '';
+      node = node[parts[i]];
+    }
+    return node === null || node === undefined ? '' : node;
+  }
+
+  function webSet(path, value) {
+    var parts = String(path).split('.');
+    var node = web.draft;
+    for (var i = 0; i < parts.length - 1; i++) node = node[parts[i]];
+    node[parts[parts.length - 1]] = value;
+  }
+
+  /** 'sections.3' -> the array, its path, and 3. */
+  function webSlot(path) {
+    var cut = path.lastIndexOf('.');
+    return { listPath: path.slice(0, cut), list: webGet(path.slice(0, cut)), index: +path.slice(cut + 1) };
+  }
+
+  /* ── Loading a page ── */
+
+  /**
+   * The console can reach the live site before the Apps Script is updated to
+   * match; say what is missing rather than show "Unknown action".
+   */
+  function webFail(err) {
+    if (err && /Unknown action: web/.test(err.message)) {
+      elView.innerHTML = panel('The website editor is not set up yet',
+        'The Apps Script behind this console needs the website code. An administrator needs to ' +
+        'add <code>apps-script/Website.gs</code> to the script project, run <code>setup()</code> ' +
+        'once, and deploy a new version — see <code>apps-script/README.md</code>.');
+      return;
+    }
+    fail(err);
+  }
+
+  function loadWebState() {
+    return A.call('webState').then(function (data) {
+      web.state = data;
+      return data;
+    });
+  }
+
+  function viewWebsitePage(pageKey) {
+    var hash = window.location.hash;
+    loading('Opening the website editor…');
+    loadWebState().then(function () {
+      /* Moved on while this was loading: leave the new screen alone. */
+      if (window.location.hash !== hash) return;
+      web.page = pageKey;
+      web.draft = S.normalise(pageKey, web.state.draft[pageKey] || web.state.published[pageKey]);
+      web.unsaved = false;
+      web.open = new WeakMap();
+      /* Church Online is all about the player, so the preview opens on it. */
+      web.wantFocus = pageKey === 'online' ? 'player' : '';
+      web.lastFocus = '';
+      web.previewPath = pageInfo(pageKey).path;
+      if (pageKey === 'home') {
+        web.open.set(web.draft.gatherings, true);
+        web.open.set(web.draft.whatsOn, true);
+      }
+      renderWebEditor();
+    }).catch(webFail);
+  }
+
+  /** Saves what is outstanding when someone moves to another screen. */
+  function leaveWebsiteEditor() {
+    if (!web.page) return;
+    if (web.unsaved) saveDraftNow().catch(function () {});
+    web.watch = null;
+    web.page = '';
+    exitFullPreview();
+  }
+
+  /* ── Saving drafts as you type ──
+     Each save carries the whole page, so saves go out one at a time and in
+     order; a failed one leaves the changes marked unsaved for the next. */
+
+  function showSaved(text, isError) {
+    var el = document.getElementById('webSaved');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('is-error', !!isError);
+  }
+
+  function saveDraftNow() {
+    clearTimeout(web.saveTimer);
+    if (!web.unsaved || !web.page) return web.saving || Promise.resolve();
+    var page = web.page;
+    var content = JSON.parse(JSON.stringify(web.draft));
+    web.unsaved = false;
+    var run = (web.saving || Promise.resolve()).catch(function () {}).then(function () {
+      if (web.page === page) showSaved('Saving…');
+      return A.call('webSaveDraft', { page: page, content: content });
+    }).then(function (data) {
+      web.state.draft[page] = content;
+      web.state.meta[page] = Object.assign({}, web.state.meta[page],
+                                           { draftAt: data.savedAt, draftBy: data.savedBy });
+      if (web.page === page && !web.unsaved) showSaved('Draft saved ' + shortStamp(data.savedAt));
+    }, function (err) {
+      if (web.page === page) {
+        web.unsaved = true;
+        showSaved('Not saved: ' + err.message, true);
+      }
+      throw err;
+    });
+    web.saving = run;
+    function settle() { if (web.saving === run) web.saving = null; }
+    run.then(settle, settle);
+    return run;
+  }
+
+  function webChanged() {
+    web.unsaved = true;
+    showSaved('Saving soon…');
+    /* A message in the pinned bar has been read once editing carries on —
+       unless it is still counting down to the site going live. */
+    var bar = document.getElementById('webMsg');
+    if (bar && bar.innerHTML && !web.watch) {
+      bar.innerHTML = '';
+      bar.className = 'adm-msg';
+    }
+    clearTimeout(web.saveTimer);
+    web.saveTimer = setTimeout(function () { saveDraftNow().catch(function () {}); }, 1500);
+    clearTimeout(web.previewTimer);
+    web.previewTimer = setTimeout(function () {
+      applyWebPreview();
+      refreshWebStatus();
+    }, 250);
+  }
+
+  /* ── Form pieces, all bound by their data-w path ── */
+
+  function wAttr(path) {
+    return ' data-w="' + esc(path) + '"';
+  }
+
+  function wText(label, path, opts) {
+    opts = opts || {};
+    return field(esc(label) + (opts.optional ? ' <span class="adm-optional">(optional)</span>' : ''),
+      '<input type="text"' + wAttr(path) + ' value="' + esc(webGet(path)) + '"' +
+      (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '') +
+      (opts.list ? ' list="webLinks"' : '') + '>',
+      opts.hint ? esc(opts.hint) : '');
+  }
+
+  function wArea(label, path, opts) {
+    opts = opts || {};
+    return field(esc(label),
+      '<textarea' + wAttr(path) + ' rows="' + (opts.rows || 4) + '">' + esc(webGet(path)) + '</textarea>',
+      esc(opts.hint === undefined ? WORDS_HINT : opts.hint));
+  }
+
+  function wCheck(path, label) {
+    return '<label class="adm-check"><input type="checkbox"' + wAttr(path) +
+      (webGet(path) === true ? ' checked' : '') + '> <span>' + esc(label) + '</span></label>';
+  }
+
+  function optionsHtml(options, current) {
+    return options.map(function (o) {
+      return '<option value="' + esc(o[0]) + '"' + (o[0] === current ? ' selected' : '') + '>' +
+        esc(o[1]) + '</option>';
+    }).join('');
+  }
+
+  var FIT_OPTIONS = [
+    ['crop', 'Fill the frame (the edges may be trimmed)'],
+    ['full', 'Show the whole picture (posters and flyers)']
+  ];
+
+  var STYLE_OPTIONS = [['primary', 'Blue button'], ['outline', 'Outlined button']];
+
+  function iconOptions(current) {
+    var list = S.ICONS.map(function (icon) { return [icon.value, icon.value + '  ' + icon.label]; });
+    if (current && !S.ICONS.some(function (icon) { return icon.value === current; })) {
+      list.unshift([current, current]);
+    }
+    return optionsHtml(list, current);
+  }
+
+  /** A picture: its address, an upload button, a thumbnail and a description. */
+  function wImage(label, path, opts) {
+    opts = opts || {};
+    var url = webGet(path);
+    var src = S.safeImage(url);
+    return '<div class="adm-field web-image">' +
+      '<label>' + esc(label) + '</label>' +
+      '<div class="web-image-row">' +
+        '<div class="web-thumb" data-w-thumb="' + esc(path) + '">' +
+          (src ? '<img src="' + esc(src) + '" alt="">' : '<span>No picture</span>') +
+        '</div>' +
+        '<div class="web-image-fields">' +
+          '<input type="text"' + wAttr(path) + ' data-w-image value="' + esc(url) + '"' +
+            ' placeholder="Upload a picture, or paste an https:// address" aria-label="' + esc(label) + ' address">' +
+          '<div class="web-image-actions">' +
+            '<label class="adm-btn small secondary web-upload">Upload a Picture' +
+              '<input type="file" accept="image/*" data-w-upload="' + esc(path) + '"' +
+              ' data-w-size="' + (opts.size || 'photo') + '" hidden>' +
+            '</label>' +
+            (opts.extra || '') +
+          '</div>' +
+          '<div class="adm-hint" data-w-upload-msg="' + esc(path) + '"></div>' +
+          (opts.alt
+            ? '<input type="text"' + wAttr(opts.alt) + ' value="' + esc(webGet(opts.alt)) + '"' +
+              ' placeholder="Describe the picture — read out by screen readers, and used by Google"' +
+              ' aria-label="' + esc(label) + ' description">'
+            : '') +
+          (opts.fit
+            ? '<select' + wAttr(opts.fit) + ' aria-label="How the picture fits">' +
+              optionsHtml(FIT_OPTIONS, webGet(opts.fit)) + '</select>'
+            : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /** ↑ ↓ ✕ for one entry in a list. */
+  function rowTools(listPath, i, count, opts) {
+    opts = opts || {};
+    var path = esc(listPath + '.' + i);
+    return '<span class="web-tools">' +
+      '<button type="button" class="web-tool" data-w-act="move" data-w-path="' + path + '" data-w-dir="-1"' +
+        (i === 0 ? ' disabled' : '') + ' aria-label="Move up" title="Move up">↑</button>' +
+      '<button type="button" class="web-tool" data-w-act="move" data-w-path="' + path + '" data-w-dir="1"' +
+        (i === count - 1 ? ' disabled' : '') + ' aria-label="Move down" title="Move down">↓</button>' +
+      (opts.noRemove ? '' :
+        '<button type="button" class="web-tool web-remove" data-w-act="remove" data-w-path="' + path + '"' +
+        ' aria-label="Remove" title="Remove">✕</button>') +
+    '</span>';
+  }
+
+  function addButton(listPath, kind, label) {
+    return '<button type="button" class="adm-btn small secondary web-add" data-w-act="add"' +
+      ' data-w-path="' + esc(listPath) + '" data-w-kind="' + kind + '">+ ' + esc(label) + '</button>';
+  }
+
+  function group(legend, body) {
+    return '<fieldset class="web-group"><legend>' + legend + '</legend>' + body + '</fieldset>';
+  }
+
+  /** The navy details box: a heading, then icon / label / value rows. */
+  function wDetails(path) {
+    var rows = webGet(path + '.details') || [];
+    return group('Details box',
+      wText('Box heading', path + '.detailsTitle', { placeholder: 'e.g. Details' }) +
+      rows.map(function (row, i) {
+        var p = path + '.details.' + i;
+        return '<div class="web-row web-detail">' +
+          '<select' + wAttr(p + '.icon') + ' aria-label="Icon">' + iconOptions(row.icon) + '</select>' +
+          '<input type="text"' + wAttr(p + '.label') + ' value="' + esc(row.label) + '"' +
+            ' placeholder="Label, e.g. When" aria-label="Label">' +
+          '<textarea' + wAttr(p + '.value') + ' rows="' +
+            Math.min(4, Math.max(2, String(row.value || '').split('\n').length)) + '"' +
+            ' placeholder="e.g. Every Sunday, 10:00 AM" aria-label="Details">' + esc(row.value) + '</textarea>' +
+          rowTools(path + '.details', i, rows.length) +
+        '</div>';
+      }).join('') +
+      (rows.length < 8 ? addButton(path + '.details', 'detail', 'Add a Row') : '') +
+      '<div class="adm-hint">Each row is an icon, a label and its details. Press Enter in the ' +
+      'details to start a new line. Remove every row to leave the box out.</div>');
+  }
+
+  function wButtons(path, max) {
+    var list = webGet(path) || [];
+    return group('Buttons',
+      list.map(function (b, i) {
+        var p = path + '.' + i;
+        return '<div class="web-row web-button-row">' +
+          '<input type="text"' + wAttr(p + '.label') + ' value="' + esc(b.label) + '"' +
+            ' placeholder="Button text" aria-label="Button text">' +
+          '<input type="text"' + wAttr(p + '.url') + ' value="' + esc(b.url) + '" list="webLinks"' +
+            ' placeholder="/pray/ or https://…" aria-label="Button link">' +
+          '<select' + wAttr(p + '.style') + ' aria-label="Button style">' +
+            optionsHtml(STYLE_OPTIONS, b.style) + '</select>' +
+          rowTools(path, i, list.length) +
+        '</div>';
+      }).join('') +
+      (list.length < max ? addButton(path, 'button', 'Add a Button') : '') +
+      (list.length ? '' : '<div class="adm-hint">No buttons.</div>'));
+  }
+
+  function wGallery(path) {
+    var list = webGet(path) || [];
+    return group('Row of photos underneath <span class="adm-optional">(optional)</span>',
+      list.map(function (g, i) {
+        return '<div class="web-row web-photo-row">' +
+          wImage('Photo ' + (i + 1), path + '.' + i + '.image', { alt: path + '.' + i + '.imageAlt' }) +
+          rowTools(path, i, list.length) +
+        '</div>';
+      }).join('') +
+      (list.length < 3 ? addButton(path, 'gallery', 'Add a Photo') : ''));
+  }
+
+  /* ── Collapsible items: sections, cards, notices ── */
+
+  function itemTitle(path, item) {
+    if (path === 'hero') return 'Page banner';
+    if (item.type === 'photo') return S.plain(item.imageAlt) || 'Wide photo';
+    return S.plain(item.title) || 'Untitled';
+  }
+
+  function wItem(path, item, kind, body, tools) {
+    var hidden = item.visible === false;
+    return '<details class="web-item' + (hidden ? ' is-hidden' : '') + '" data-w-item="' + esc(path) + '"' +
+        (web.open.get(item) ? ' open' : '') + '>' +
+      '<summary>' +
+        (kind ? '<span class="web-item-kind">' + esc(kind) + '</span>' : '') +
+        '<span class="web-item-title">' + esc(itemTitle(path, item)) + '</span>' +
+        '<span class="web-item-pills">' +
+          (hidden ? '<span class="adm-pill grey">Hidden</span>' : '') +
+          (item.isNew ? '<span class="adm-pill gold">New</span>' : '') +
+        '</span>' +
+        (tools || '') +
+      '</summary>' +
+      '<div class="web-item-body">' + body + '</div>' +
+    '</details>';
+  }
+
+  /** Keeps an item's header in step with its heading and Show box. */
+  function refreshItemHead(host) {
+    var path = host.getAttribute('data-w-item');
+    var item = webGet(path);
+    if (!item || typeof item !== 'object') return;
+    host.querySelector('.web-item-title').textContent = itemTitle(path, item);
+    host.classList.toggle('is-hidden', item.visible === false);
+    host.querySelector('.web-item-pills').innerHTML =
+      (item.visible === false ? '<span class="adm-pill grey">Hidden</span>' : '') +
+      (item.isNew ? '<span class="adm-pill gold">New</span>' : '');
+  }
+
+  /* ── The editors for each kind of thing ── */
+
+  function menusGroup(p, s, id) {
+    var page = pageInfo(web.page);
+    return group('Menus',
+      '<div class="adm-grid-2">' +
+        wText('Name in the bar under the banner', p + '.subnav', { placeholder: 'Blank: leave it out' }) +
+        wText(web.page === 'gatherings' ? 'Name in the site menu and footer' : 'Name in the site menu',
+              p + '.menu', { placeholder: 'Blank: leave it out' }) +
+      '</div>' +
+      '<div class="adm-hint">Link to this section: <code>' + esc(page.path + '#' + id) + '</code>' +
+      (s.isNew ? ' — this follows the heading until the section is first published, then stays put ' +
+                 'so links to it keep working.' : '') + '</div>');
+  }
+
+  function featureBody(p, s, id) {
+    return '<div class="web-flags">' +
+        wCheck(p + '.visible', 'Show this section') +
+        wCheck(p + '.grey', 'Grey background') +
+        wCheck(p + '.imageFirst', 'On phones, put the picture above the words') +
+      '</div>' +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', p + '.label', { placeholder: 'e.g. Midweek' }) +
+        wText('Heading', p + '.title') +
+      '</div>' +
+      wArea('Words', p + '.body', { rows: 6 }) +
+      wDetails(p) +
+      wButtons(p + '.buttons', 2) +
+      group('Picture', wImage('Picture beside the words', p + '.image',
+                              { alt: p + '.imageAlt', fit: p + '.imageFit' })) +
+      wGallery(p + '.gallery') +
+      menusGroup(p, s, id);
+  }
+
+  function photoBody(p) {
+    return wCheck(p + '.visible', 'Show this photo') +
+      wImage('Photo across the full width of the page', p + '.image', { alt: p + '.imageAlt' });
+  }
+
+  function sundaySchoolBody(p, s, id) {
+    return '<div class="web-note">The <strong>home page</strong>’s Sunday School panel is made from ' +
+        'this section — the introduction, this term’s words and both pictures — so it only ever ' +
+        'needs changing here.</div>' +
+      '<div class="web-flags">' +
+        wCheck(p + '.visible', 'Show this section, and the home page panel') +
+        wCheck(p + '.grey', 'Grey background') +
+      '</div>' +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', p + '.label') +
+        wText('Heading', p + '.title') +
+      '</div>' +
+      wArea('Introduction', p + '.intro', { rows: 4 }) +
+      group('The curriculum',
+        wText('Heading', p + '.curriculum.title') +
+        wArea('Words', p + '.curriculum.body', { rows: 5 }) +
+        '<div class="adm-grid-2">' +
+          wText('Button text', p + '.curriculum.buttonLabel') +
+          wText('Button link', p + '.curriculum.buttonUrl', { list: true }) +
+        '</div>' +
+        wImage('Picture', p + '.curriculum.image', { alt: p + '.curriculum.imageAlt' })) +
+      group('This term',
+        wText('Heading', p + '.lessons.title', { placeholder: 'e.g. Term 4 Lessons' }) +
+        wArea('Words', p + '.lessons.body', { rows: 4 }) +
+        wImage('Lessons poster', p + '.lessons.image', { alt: p + '.lessons.imageAlt' }) +
+        wDetails(p + '.lessons') +
+        '<div class="adm-grid-2">' +
+          wText('Button text', p + '.lessons.buttonLabel') +
+          wText('Button link', p + '.lessons.buttonUrl', { list: true }) +
+        '</div>') +
+      menusGroup(p, s, id);
+  }
+
+  function noticeEditor(listPath, a, j, count) {
+    var p = listPath + '.' + j;
+    return wItem(p, a, '',
+      wCheck(p + '.visible', 'Show this notice') +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', p + '.tag', { placeholder: 'e.g. Upcoming Event' }) +
+        wText('Heading', p + '.title') +
+      '</div>' +
+      wArea('Words', p + '.body', { rows: 4 }) +
+      wArea('Small print', p + '.small', {
+        rows: 2, hint: 'Dates, times, how to register — shown in smaller type underneath.' }) +
+      wImage('Picture or poster', p + '.image', { alt: p + '.imageAlt' }) +
+      '<div class="adm-grid-2">' +
+        wText('Button text', p + '.buttonLabel', { optional: true }) +
+        wText('Button link', p + '.buttonUrl', { list: true }) +
+      '</div>',
+      rowTools(listPath, j, count));
+  }
+
+  function announcementsBody(p, s, id) {
+    var items = s.items || [];
+    return '<div class="web-flags">' +
+        wCheck(p + '.visible', 'Show this section') +
+        wCheck(p + '.grey', 'Grey background') +
+      '</div>' +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', p + '.label') +
+        wText('Heading', p + '.title') +
+      '</div>' +
+      group('Notices',
+        '<div class="web-list">' +
+          items.map(function (a, j) { return noticeEditor(p + '.items', a, j, items.length); }).join('') +
+        '</div>' +
+        (items.length < 12 ? addButton(p + '.items', 'notice', 'Add a Notice') : '') +
+        '<div class="adm-hint">Once an event has passed, untick <em>Show this notice</em> or remove ' +
+        'it. When none are showing, the words below appear instead.</div>') +
+      group('When there are no notices',
+        wArea('Words', p + '.emptyText', { rows: 3 }) +
+        '<div class="adm-grid-2">' +
+          wText('Button text', p + '.emptyButtonLabel') +
+          wText('Button link', p + '.emptyButtonUrl', { list: true }) +
+        '</div>') +
+      menusGroup(p, s, id);
+  }
+
+  function sectionEditor(s, i, count, id) {
+    var p = 'sections.' + i;
+    var body = s.type === 'photo' ? photoBody(p)
+      : s.type === 'sunday-school' ? sundaySchoolBody(p, s, id)
+      : s.type === 'announcements' ? announcementsBody(p, s, id)
+      : featureBody(p, s, id);
+    /* The home page is built from the Sunday School section, so it can be
+       hidden but not removed. */
+    return wItem(p, s, SECTION_KINDS[s.type], body,
+                 rowTools('sections', i, count, { noRemove: s.type === 'sunday-school' }));
+  }
+
+  function heroEditor() {
+    return wItem('hero', web.draft.hero, 'Banner',
+      wImage('Banner picture', 'hero.image', { alt: 'hero.imageAlt', size: 'hero' }) +
+      '<div class="adm-hint">A wide landscape photo works best; the top and bottom are trimmed to ' +
+      'fit the screen.</div>' +
+      wText('Heading', 'hero.title') +
+      wText('Line underneath', 'hero.subtitle'), '');
+  }
+
+  function sectionsEditor() {
+    var norm = S.normalise(web.page, web.draft);
+    var list = web.draft.sections;
+    var hasNotices = list.some(function (s) { return s.type === 'announcements'; });
+    return heroEditor() +
+      '<div class="web-list-head">Sections, top to bottom</div>' +
+      '<div class="web-list">' +
+        list.map(function (s, i) {
+          return sectionEditor(s, i, list.length, (norm.sections[i] || s).id);
+        }).join('') +
+      '</div>' +
+      '<div class="web-adds">' +
+        addButton('sections', 'feature', 'Add a Section') +
+        addButton('sections', 'photo', 'Add a Wide Photo') +
+        (web.page === 'whatson' && !hasNotices ? addButton('sections', 'announcements', 'Add the Announcements') : '') +
+      '</div>';
+  }
+
+  function cardEditor(key, card, i, count) {
+    var p = key + '.cards.' + i;
+    var wholeCardLink = key === 'gatherings';
+    return wItem(p, card, '',
+      wCheck(p + '.visible', 'Show this card') +
+      wImage('Picture', p + '.image', { alt: p + '.imageAlt', fit: wholeCardLink ? null : p + '.imageFit' }) +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', p + '.tag',
+              { placeholder: wholeCardLink ? 'e.g. Wednesdays · 7:00 PM' : 'e.g. Monthly Gathering' }) +
+        wText('Heading', p + '.title') +
+      '</div>' +
+      wArea('Words', p + '.text', {
+        rows: 3,
+        hint: wholeCardLink
+          ? 'A sentence or two. The whole card is a link, so links cannot go in here.'
+          : 'A sentence or two. **Bold** and *italic* work here.'
+      }) +
+      '<div class="adm-grid-2">' +
+        wText('Link text', p + '.linkLabel', { placeholder: 'e.g. Learn more' }) +
+        wText('Link', p + '.link', { list: true, placeholder: 'e.g. /gatherings/#life-groups' }) +
+      '</div>',
+      rowTools(key + '.cards', i, count));
+  }
+
+  function homeBlock(key, newKind) {
+    var block = web.draft[key];
+    var cards = block.cards || [];
+    return wItem(key, block, '',
+      wCheck(key + '.visible', 'Show this section on the home page') +
+      '<div class="adm-grid-2">' +
+        wText('Small heading', key + '.label') +
+        wText('Heading', key + '.title') +
+      '</div>' +
+      wArea('Introduction', key + '.intro', { rows: 2 }) +
+      group('Cards',
+        '<div class="web-list">' +
+          cards.map(function (c, i) { return cardEditor(key, c, i, cards.length); }).join('') +
+        '</div>' +
+        (cards.length < 6 ? addButton(key + '.cards', newKind, 'Add a Card') : '') +
+        '<div class="adm-hint">Three cards fill a row on a computer screen.</div>') +
+      '<div class="adm-grid-2">' +
+        wText('Button under the cards', key + '.buttonLabel') +
+        wText('Button link', key + '.buttonUrl', { list: true }) +
+      '</div>', '');
+  }
+
+  function homeEditor() {
+    return homeBlock('gatherings', 'card') +
+      '<div class="web-note web-note-block"><strong>Sunday School</strong> — the panel between these ' +
+        'two sections is made from the Sunday School section of the Gatherings page. ' +
+        '<a href="#/website/gatherings">Change it there →</a></div>' +
+      homeBlock('whatsOn', 'card-full');
+  }
+
+  function ytStatus() {
+    var id = S.youtubeId(web.draft.videoUrl);
+    return id
+      ? '<span class="adm-pill green">Video found</span> <code>' + esc(id) + '</code> · ' +
+        '<a href="https://www.youtube.com/watch?v=' + esc(id) + '" target="_blank" rel="noopener">' +
+        'Open it on YouTube ↗</a> — or press play in the preview.'
+      : '<span class="adm-pill gold">No video yet</span> Paste a YouTube link above.';
+  }
+
+  function onlineEditor() {
+    return '<div class="web-card">' +
+      field('YouTube link for the latest livestream',
+        '<input type="text" class="web-big"' + wAttr('videoUrl') + ' value="' + esc(web.draft.videoUrl) + '"' +
+        ' placeholder="https://www.youtube.com/live/…  or  https://youtu.be/…">',
+        'On YouTube, press <strong>Share</strong> under the stream and copy the link, or copy the ' +
+        'address bar while the stream is open. Any kind of YouTube link works.') +
+      '<div class="web-yt" id="webYt">' + ytStatus() + '</div>' +
+      '<div class="adm-grid-2">' +
+        wText('Caption on the player', 'caption') +
+        wText('Button text', 'buttonLabel', { hint: 'The button beside the player that opens YouTube.' }) +
+      '</div>' +
+      wImage('Picture on the player', 'image', {
+        alt: 'imageAlt',
+        extra: '<button type="button" class="adm-btn small secondary" data-w-act="yt-thumb">' +
+               'Use the Video’s Thumbnail</button>'
+      }) +
+    '</div>';
+  }
+
+  function editorBody() {
+    if (web.page === 'home') return homeEditor();
+    if (web.page === 'online') return onlineEditor();
+    return sectionsEditor();
+  }
+
+  /** Suggestions for every link box: the site's pages and their sections. */
+  function linkSuggestions() {
+    var site = S.normaliseAll(previewSite(web.draft));
+    var out = [['/', 'Home'], ['/visit/', 'Your First Sunday'], ['/gatherings/', 'Gatherings'],
+               ['/church-online/', 'Church Online'], ['/whats-on/', 'What’s On'],
+               ['/next-steps/', 'Next Steps'], ['/about/', 'About'], ['/give/', 'Give'],
+               ['/pray/', 'Let Us Pray For You / Contact']];
+    [['gatherings', '/gatherings/', 'Gatherings'], ['whatson', '/whats-on/', 'What’s On']].forEach(function (pg) {
+      site[pg[0]].sections.forEach(function (s) {
+        if (s.id && s.type !== 'photo') out.push([pg[1] + '#' + s.id, pg[2] + ' — ' + S.plain(s.title)]);
+      });
+    });
+    return '<datalist id="webLinks">' + out.map(function (o) {
+      return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>';
+    }).join('') + '</datalist>';
+  }
+
+  /* ── The screen ── */
+
+  var WEB_INTROS = {
+    home: 'The two rows of cards on the home page. The Sunday School panel between them comes from ' +
+          'the Gatherings page.',
+    gatherings: 'The banner and every section of the Gatherings page, in order. The site menu, the ' +
+                'footer and the home page’s Sunday School panel all follow what is here.',
+    online: 'The video on the Church Online page. Paste this week’s livestream link, check it plays ' +
+            'in the preview, and publish.',
+    whatson: 'The banner, every section and the announcements on the What’s On page. The site menu ' +
+             'follows what is here.'
+  };
+
+  function renderWebEditor() {
+    var info = pageInfo(web.page);
+    var setup = web.state.configured ? '' :
+      '<div class="adm-msg info">Publishing is not connected yet, so changes can be saved as a draft ' +
+      'but not published. ' + (A.hasRole('admin')
+        ? '<a href="#/website/settings">Connect it under Settings › Website Publishing.</a>'
+        : 'Ask an administrator to connect it under Settings › Website Publishing.') + '</div>';
+
+    elView.innerHTML =
+      '<div class="adm-panel web-panel">' +
+        '<div class="adm-panel-head">' +
+          '<div><h2>' + esc(info.label) + '</h2>' +
+          '<p class="adm-sub">' + esc(WEB_INTROS[web.page]) + '</p></div>' +
+        '</div>' +
+        /* The bar, and the messages in it, stay in view while the form
+           scrolls, so Publish and its outcome are always to hand. */
+        '<div class="web-bar">' +
+          '<div class="web-bar-row">' +
+            '<div class="web-status" id="webStatus"></div>' +
+            '<div class="web-bar-actions">' +
+              '<span class="adm-hint web-saved" id="webSaved" aria-live="polite"></span>' +
+              '<button class="adm-btn small secondary" type="button" id="webDiscard">Discard Changes</button>' +
+              '<a class="adm-btn small secondary" href="' + esc(info.path) + '" target="_blank" rel="noopener">' +
+                'View Live Page</a>' +
+              '<button class="adm-btn" type="button" id="webPublish">Publish</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="adm-msg" id="webMsg" aria-live="polite"></div>' +
+        '</div>' +
+        setup +
+        '<div class="web-compose">' +
+          '<div class="web-editor" id="webEditor">' + editorBody() + '</div>' +
+          '<div class="web-preview" id="webPreview">' + previewHtml() + '</div>' +
+        '</div>' +
+        linkSuggestions() +
+        '<div class="web-toast" id="webToast" role="status" aria-live="polite" hidden></div>' +
+      '</div>';
+
+    bindWebEditor();
+    refreshWebStatus();
+    showSaved(web.state.meta[web.page] && web.state.meta[web.page].draftAt
+      ? 'Draft saved ' + shortStamp(web.state.meta[web.page].draftAt) : '');
+    loadPreview();
+    if (web.notice) {
+      msgHtml('webMsg', web.notice.html, web.notice.kind);
+      web.notice = null;
+    }
+  }
+
+  /**
+   * Rebuilds the form after something is added, moved or removed, then puts
+   * the keyboard back where the person was: on the same arrow button after a
+   * move (so pressing it again keeps going), or in the first box of something
+   * just added.
+   */
+  function rerenderWebEditor(focusPath, focusSelector) {
+    var editor = document.getElementById('webEditor');
+    if (!editor) return;
+    editor.innerHTML = editorBody();
+    var links = document.getElementById('webLinks');
+    if (links) links.outerHTML = linkSuggestions();
+    if (!focusPath) return;
+    var host = editor.querySelector('[data-w-item="' + focusPath + '"]');
+    var target = focusSelector ? editor.querySelector(focusSelector) : null;
+    if (target && target.disabled) {
+      target = editor.querySelector('[data-w-act="move"][data-w-path="' + focusPath + '"]:not([disabled])');
+    }
+    if (!target && host && host.open) {
+      target = host.querySelector('.web-item-body input, .web-item-body textarea, .web-item-body select');
+    }
+    if (!target) target = editor.querySelector('[data-w^="' + focusPath + '."]');
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    (host || target).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function refreshWebStatus() {
+    var el = document.getElementById('webStatus');
+    if (!el || !web.page) return;
+    var meta = web.state.meta[web.page] || {};
+    var changed = JSON.stringify(S.finalise(web.page, web.draft)) !==
+                  JSON.stringify(S.finalise(web.page, web.state.published[web.page]));
+    el.innerHTML =
+      '<span class="adm-pill ' + (changed ? 'gold' : 'green') + '">' +
+        (changed ? 'Unpublished changes' : 'Live site is up to date') + '</span>' +
+      '<span class="adm-hint">' + (meta.publishedAt
+        ? 'Last published ' + esc(shortStamp(meta.publishedAt, true)) +
+          (meta.publishedBy ? ' by ' + esc(meta.publishedBy) : '')
+        : 'Not published from here yet') + '</span>';
+    var discard = document.getElementById('webDiscard');
+    if (discard && !discard.classList.contains('is-confirm')) discard.disabled = !changed;
+  }
+
+  function updateYt() {
+    var el = document.getElementById('webYt');
+    if (el) el.innerHTML = ytStatus();
+  }
+
+  function syncWebThumb(path, url) {
+    var box = document.querySelector('[data-w-thumb="' + path + '"]');
+    if (!box) return;
+    var src = S.safeImage(url);
+    box.innerHTML = src ? '<img src="' + esc(src) + '" alt="">' : '<span>No picture</span>';
+  }
+
+  function bindWebEditor() {
+    var editor = document.getElementById('webEditor');
+
+    /* Text as it is typed; tick boxes and dropdowns are handled on change. */
+    editor.addEventListener('input', function (e) {
+      var path = e.target.getAttribute('data-w');
+      if (!path || e.target.type === 'checkbox' || e.target.tagName === 'SELECT') return;
+      webSet(path, e.target.value);
+      fieldChanged(e.target, path);
+    });
+
+    editor.addEventListener('change', function (e) {
+      var path = e.target.getAttribute('data-w');
+      if (path && (e.target.type === 'checkbox' || e.target.tagName === 'SELECT')) {
+        webSet(path, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+        fieldChanged(e.target, path);
+        return;
+      }
+      var upload = e.target.getAttribute('data-w-upload');
+      if (upload && e.target.files && e.target.files[0]) {
+        webUpload(upload, e.target.files[0], e.target.getAttribute('data-w-size'));
+        e.target.value = '';
+      }
+    });
+
+    /* The ↑ ↓ ✕ buttons sit inside <summary>, where a plain click would
+       also open or close the item. */
+    editor.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-w-act]');
+      if (!btn || btn.disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
+      webAction(btn.getAttribute('data-w-act'), btn);
+    });
+
+    /* toggle does not bubble, so listen on the way down. An item that was
+       already recorded as open (a rebuild re-opening it) is not news. */
+    editor.addEventListener('toggle', function (e) {
+      var el = e.target;
+      if (!el.matches || !el.matches('details[data-w-item]')) return;
+      var item = webGet(el.getAttribute('data-w-item'));
+      if (!item || typeof item !== 'object' || !!web.open.get(item) === el.open) return;
+      web.open.set(item, el.open);
+      if (el.open) previewFocus(el.getAttribute('data-w-item'));
+    }, true);
+
+    editor.addEventListener('focusin', function (e) {
+      var host = e.target.closest('[data-w-item]');
+      if (host) previewFocus(host.getAttribute('data-w-item'));
+    });
+
+    document.getElementById('webToast').addEventListener('click', function (e) {
+      if (e.target.closest('[data-w-undo]')) undoWebRemove();
+    });
+
+    on('webPublish', 'click', publishWebPage);
+    on('webDiscard', 'click', discardWebChanges);
+    bindPreviewControls();
+  }
+
+  function fieldChanged(target, path) {
+    if (target.hasAttribute('data-w-image')) syncWebThumb(path, target.value);
+    if (path === 'videoUrl') updateYt();
+    var host = target.closest('[data-w-item]');
+    if (host && /(^|\.)(title|visible|imageAlt)$/.test(path)) refreshItemHead(host);
+    webChanged();
+  }
+
+  /* ── Adding, moving and removing ── */
+
+  function webAction(act, btn) {
+    var path = btn.getAttribute('data-w-path');
+    if (act === 'move') moveWebItem(path, +btn.getAttribute('data-w-dir'));
+    else if (act === 'remove') removeWebItem(path);
+    else if (act === 'add') addWebItem(path, btn.getAttribute('data-w-kind'));
+    else if (act === 'yt-thumb') useYoutubeThumb();
+  }
+
+  function moveWebItem(path, dir) {
+    var slot = webSlot(path);
+    var to = slot.index + dir;
+    if (!Array.isArray(slot.list) || to < 0 || to >= slot.list.length) return;
+    slot.list.splice(to, 0, slot.list.splice(slot.index, 1)[0]);
+    var newPath = slot.listPath + '.' + to;
+    rerenderWebEditor(newPath, '[data-w-act="move"][data-w-path="' + newPath + '"][data-w-dir="' + dir + '"]');
+    webChanged();
+  }
+
+  /**
+   * A short note at the foot of the window, for things done far down a long
+   * form — removing something, and taking it back — where a message at the
+   * top would go unseen.
+   */
+  function webToast(html) {
+    var el = document.getElementById('webToast');
+    if (!el) return;
+    el.innerHTML = html;
+    el.hidden = false;
+    clearTimeout(web.toastTimer);
+    web.toastTimer = setTimeout(function () { el.hidden = true; }, 9000);
+  }
+
+  function removeWebItem(path) {
+    var slot = webSlot(path);
+    if (!Array.isArray(slot.list)) return;
+    var item = slot.list.splice(slot.index, 1)[0];
+    web.removed = { listPath: slot.listPath, index: slot.index, item: item };
+    rerenderWebEditor();
+    webChanged();
+    var name = item && typeof item === 'object' && (item.title || item.label || item.imageAlt);
+    webToast('<span>Removed' + (name ? ' “' + esc(S.plain(name)) + '”' : '') + '.</span>' +
+      '<button type="button" class="adm-btn small secondary" data-w-undo>Undo</button>');
+  }
+
+  function undoWebRemove() {
+    var r = web.removed;
+    if (!r) return;
+    var list = webGet(r.listPath);
+    if (!Array.isArray(list)) return;
+    list.splice(Math.min(r.index, list.length), 0, r.item);
+    web.removed = null;
+    rerenderWebEditor(r.listPath + '.' + Math.min(r.index, list.length - 1));
+    webChanged();
+    webToast('<span>Put back.</span>');
+  }
+
+  function newWebItem(kind, list) {
+    if (kind === 'feature') {
+      var s = S.blankSection('feature');
+      s.isNew = true;
+      /* Carry on the white / grey rhythm of the page. */
+      var shown = list.filter(function (x) { return x.visible !== false && x.type !== 'photo'; });
+      s.grey = shown.length ? !shown[shown.length - 1].grey : false;
+      return s;
+    }
+    if (kind === 'photo' || kind === 'announcements') return S.blankSection(kind);
+    if (kind === 'card') return S.blankCard('crop');
+    if (kind === 'card-full') return S.blankCard('full');
+    if (kind === 'notice') return S.blankAnnouncement();
+    if (kind === 'detail') return S.blankDetail();
+    if (kind === 'button') return S.blankButton('', '', list.length ? 'outline' : 'primary');
+    if (kind === 'gallery') return S.blankGalleryPhoto();
+    return null;
+  }
+
+  function addWebItem(listPath, kind) {
+    var list = webGet(listPath);
+    var item = Array.isArray(list) ? newWebItem(kind, list) : null;
+    if (!item) return;
+    list.push(item);
+    web.open.set(item, true);
+    rerenderWebEditor(listPath + '.' + (list.length - 1));
+    webChanged();
+  }
+
+  function useYoutubeThumb() {
+    var id = S.youtubeId(web.draft.videoUrl);
+    if (!id) {
+      msg('webMsg', 'Paste the YouTube link first, then its thumbnail can be used.', 'error');
+      return;
+    }
+    web.draft.image = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+    if (!web.draft.imageAlt) web.draft.imageAlt = web.draft.caption || 'Watch the latest service';
+    rerenderWebEditor();
+    webChanged();
+  }
+
+  /* ── Pictures ── */
+
+  function webUpload(path, file, sizeKind) {
+    var note = document.querySelector('[data-w-upload-msg="' + path + '"]');
+    function say(text) { if (note && note.isConnected) note.textContent = text; }
+
+    /* Remember where the picture belongs, in case the list moves meanwhile. */
+    var cut = path.lastIndexOf('.');
+    var parentPath = cut > 0 ? path.slice(0, cut) : '';
+    var key = path.slice(cut + 1);
+    var holder = parentPath ? webGet(parentPath) : web.draft;
+    var draft = web.draft;
+
+    say('Preparing ' + file.name + '…');
+    prepareImage(file, WEB_IMAGE_SIZES[sizeKind] || WEB_IMAGE_SIZES.photo).then(function (ready) {
+      say('Uploading… ' + ready.note);
+      return A.call('webUploadImage', {
+        name: ready.name,
+        mimeType: ready.mimeType,
+        dataBase64: ready.base64
+      }).then(function (data) {
+        if (web.draft !== draft) return;
+        holder[key] = data.url;
+        if ((parentPath ? webGet(parentPath) : web.draft) === holder) {
+          var input = document.querySelector('[data-w="' + path + '"]');
+          if (input) input.value = data.url;
+          syncWebThumb(path, data.url);
+        } else {
+          rerenderWebEditor();
+        }
+        say('Uploaded. ' + ready.note + ' It goes on the website when you publish.');
+        webChanged();
+      });
+    }).catch(function (err) {
+      say(err.message);
+    });
+  }
+
+  /* ── The preview ──
+     The real page from this site, loaded in a frame, with each editable
+     region swapped for the draft. Only the regions change as you type, so
+     the page keeps its scroll position. */
+
+  function previewSite(draft) {
+    var site = {};
+    S.PAGES.forEach(function (p) { site[p.key] = web.state.published[p.key]; });
+    site[web.page] = draft;
+    return site;
+  }
+
+  function previewTargets() {
+    var own = pageInfo(web.page);
+    var list = [[own.path, own.label]];
+    /* The home page's Sunday School panel is drawn from the Gatherings page. */
+    if (web.page === 'gatherings') list.push(['/', 'Home Page']);
+    return list;
+  }
+
+  function previewHtml() {
+    var targets = previewTargets();
+    return '<div class="web-preview-head">' +
+        '<strong>Preview</strong>' +
+        (targets.length > 1
+          ? '<select id="webPreviewPage" aria-label="Page to preview">' + optionsHtml(targets, web.previewPath) + '</select>'
+          : '') +
+        '<span class="web-devices">' +
+          '<button type="button" class="adm-btn small secondary' + (web.device === 'desktop' ? ' is-on' : '') +
+            '" data-w-device="desktop">Computer</button>' +
+          '<button type="button" class="adm-btn small secondary' + (web.device === 'phone' ? ' is-on' : '') +
+            '" data-w-device="phone">Phone</button>' +
+          '<button type="button" class="adm-btn small secondary" id="webFull" aria-pressed="false">' +
+            'Full Screen</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="web-frame-box" id="webFrameBox">' +
+        '<iframe id="webFrame" title="Preview of the page with your changes"></iframe>' +
+        '<div class="web-frame-note" id="webFrameNote">Loading the page…</div>' +
+      '</div>' +
+      '<div class="adm-hint">The real page, with your changes in it. Links are switched off here.</div>';
+  }
+
+  function bindPreviewControls() {
+    document.querySelectorAll('[data-w-device]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        web.device = btn.getAttribute('data-w-device');
+        document.querySelectorAll('[data-w-device]').forEach(function (other) {
+          other.classList.toggle('is-on', other === btn);
+        });
+        sizePreview();
+      });
+    });
+    on('webPreviewPage', 'change', function (e) {
+      web.previewPath = e.target.value;
+      loadPreview();
+    });
+    on('webFull', 'click', function () {
+      var pane = document.getElementById('webPreview');
+      var full = !pane.classList.contains('is-full');
+      pane.classList.toggle('is-full', full);
+      document.getElementById('webFull').setAttribute('aria-pressed', String(full));
+      document.getElementById('webFull').textContent = full ? 'Close Full Screen' : 'Full Screen';
+      document.body.classList.toggle('web-full-open', full);
+      sizePreview();
+    });
+  }
+
+  function exitFullPreview() {
+    document.body.classList.remove('web-full-open');
+  }
+
+  /** Fits a computer-width page into the pane by scaling it, never stretching it. */
+  function sizePreview() {
+    var box = document.getElementById('webFrameBox');
+    var frame = document.getElementById('webFrame');
+    if (!box || !frame) return;
+    var width = WEB_DEVICES[web.device];
+    var scale = Math.min(1, box.clientWidth / width);
+    frame.style.width = width + 'px';
+    frame.style.height = Math.round(box.clientHeight / scale) + 'px';
+    frame.style.transform = scale < 1 ? 'scale(' + scale + ')' : 'none';
+    frame.style.left = scale < 1 ? '0px' : Math.round((box.clientWidth - width) / 2) + 'px';
+  }
+
+  function loadPreview() {
+    var frame = document.getElementById('webFrame');
+    var note = document.getElementById('webFrameNote');
+    if (!frame) return;
+    note.textContent = 'Loading the page…';
+    note.hidden = false;
+    sizePreview();
+    frame.onload = function () {
+      var doc = frame.contentDocument;
+      if (!doc || !doc.body) return;
+      guardPreview(doc);
+      var found = applyWebPreview();
+      note.hidden = found > 0;
+      if (!found) {
+        note.textContent = 'This page has no editable parts yet — the update that adds them has not ' +
+                           'reached the live site.';
+      }
+      sizePreview();
+      if (web.wantFocus) previewFocus(web.wantFocus, true);
+    };
+    frame.src = web.previewPath + '?preview=' + Date.now();
+  }
+
+  function applyWebPreview() {
+    var frame = document.getElementById('webFrame');
+    var doc = frame && frame.contentDocument;
+    if (!doc || !doc.body || !web.page) return 0;
+    var found = 0;
+    try {
+      found = S.applyToDocument(doc, S.render(previewSite(web.draft)));
+    } catch (err) {
+      return 0;
+    }
+    /* Lazy pictures arriving late would shift the page under the scroll to
+       the item being edited; in the preview, load them all at once. */
+    doc.querySelectorAll('img[loading="lazy"]').forEach(function (img) { img.loading = 'eager'; });
+    if (web.wantFocus && web.wantFocus !== web.lastFocus) previewFocus(web.wantFocus);
+    return found;
+  }
+
+  /* Links would take the frame off to another page; in-page ones still scroll. */
+  function guardPreview(doc) {
+    doc.addEventListener('click', function (e) {
+      var link = e.target.closest && e.target.closest('a');
+      if (!link) return;
+      e.preventDefault();
+      var href = link.getAttribute('href') || '';
+      var target = href.charAt(0) === '#' && doc.getElementById(href.slice(1));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    }, true);
+  }
+
+  /** The first element of a region in the previewed page. */
+  function regionElement(doc, name) {
+    var walker = doc.createTreeWalker(doc.body, 128 /* NodeFilter.SHOW_COMMENT */);
+    while (walker.nextNode()) {
+      if (new RegExp('^\\s*cms:' + name + '(\\s|$)').test(walker.currentNode.nodeValue)) {
+        var node = walker.currentNode.nextSibling;
+        while (node && node.nodeType !== 1) node = node.nextSibling;
+        return node && node.nodeType === 1 ? node : null;
+      }
+    }
+    return null;
+  }
+
+  function previewTarget(doc, itemPath) {
+    var parts = itemPath.split('.');
+    if (web.page === 'online') return doc.getElementById('ytThumb');
+    if (web.page === 'home') {
+      var region = regionElement(doc, parts[0] === 'gatherings' ? 'home-gatherings' : 'home-whats-on');
+      if (region && parts[1] === 'cards' && parts[2] !== undefined) {
+        var shown = (web.draft[parts[0]].cards || []).slice(0, +parts[2] + 1)
+          .filter(function (c) { return c.visible !== false; }).length;
+        return region.querySelectorAll('.card')[shown - 1] || region;
+      }
+      return region;
+    }
+    if (parts[0] === 'hero') return doc.querySelector('.page-hero');
+    if (parts[0] !== 'sections') return null;
+    var section = S.normalise(web.page, web.draft).sections[+parts[1]];
+    if (!section) return null;
+    if (web.previewPath === '/' && section.type === 'sunday-school') {
+      return regionElement(doc, 'home-sunday-school');
+    }
+    return section.id ? doc.getElementById(section.id) : null;
+  }
+
+  /**
+   * Scrolls the preview to whatever is being edited. A section that has only
+   * just been added may not be in the preview yet, so the scroll is noted as
+   * wanted and tried again each time the preview catches up.
+   */
+  function previewFocus(itemPath, force) {
+    if (!itemPath) return;
+    web.wantFocus = itemPath;
+    if (!force && itemPath === web.lastFocus) return;
+    var frame = document.getElementById('webFrame');
+    var doc = frame && frame.contentDocument;
+    if (!doc || !doc.body) return;
+    var target = previewTarget(doc, itemPath);
+    if (!target) return;
+    web.lastFocus = itemPath;
+    var win = frame.contentWindow;
+    function aim(behavior) {
+      var el = previewTarget(doc, itemPath);
+      if (!el) return;
+      win.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + win.pageYOffset - 90), behavior: behavior });
+    }
+    aim('smooth');
+    /* Pictures above it may still be arriving; settle once they have. */
+    setTimeout(function () { if (web.lastFocus === itemPath) aim('auto'); }, 900);
+  }
+
+  window.addEventListener('resize', function () {
+    if (document.getElementById('webFrameBox')) sizePreview();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var pane = document.getElementById('webPreview');
+    if (e.key === 'Escape' && pane && pane.classList.contains('is-full')) {
+      document.getElementById('webFull').click();
+    }
+  });
+
+  /* ── Discarding and publishing ── */
+
+  function discardWebChanges() {
+    var btn = document.getElementById('webDiscard');
+    /* A second press within a few seconds confirms — no pop-up needed. */
+    if (!btn.classList.contains('is-confirm')) {
+      btn.classList.add('is-confirm');
+      btn.textContent = 'Press Again to Discard';
+      setTimeout(function () {
+        if (!btn.isConnected) return;
+        btn.classList.remove('is-confirm');
+        btn.textContent = 'Discard Changes';
+        refreshWebStatus();
+      }, 4000);
+      return;
+    }
+    web.draft = S.normalise(web.page, web.state.published[web.page]);
+    web.open = new WeakMap();
+    if (web.page === 'home') {
+      web.open.set(web.draft.gatherings, true);
+      web.open.set(web.draft.whatsOn, true);
+    }
+    btn.classList.remove('is-confirm');
+    btn.textContent = 'Discard Changes';
+    rerenderWebEditor();
+    webChanged();
+    msg('webMsg', 'Your changes have been discarded. The editor shows the live version again.', 'info');
+  }
+
+  function sendWebPublish(page, retry) {
+    var content = S.finalise(page, web.draft);
+    var site = previewSite(content);
+    return A.call('webPublish', {
+      page: page,
+      content: content,
+      regions: S.render(site),
+      rev: web.state.rev,
+      summary: S.summarise(page, web.state.published[page], content)
+    }).catch(function (err) {
+      if (err.code !== 'stale' || !retry) throw err;
+      /* Someone published another page since this one was opened. Take their
+         version of the other pages, then go again. */
+      msg('webMsg', err.message, 'info');
+      return A.call('webState').then(function (data) {
+        web.state.published = data.published;
+        web.state.meta = data.meta;
+        web.state.rev = data.rev;
+        return sendWebPublish(page, false);
+      });
+    });
+  }
+
+  function publishWebPage() {
+    var page = web.page;
+    var check = S.validate(page, web.draft);
+    if (check.errors.length) {
+      msgHtml('webMsg', '<strong>Not published yet.</strong> Please fix these first:<ul class="web-list-msg">' +
+        check.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>', 'error');
+      return;
+    }
+    if (!web.state.configured) {
+      msg('webMsg', 'Publishing is not connected yet. Your changes are saved as a draft.', 'error');
+      return;
+    }
+    web.watch = null;
+    busy('webPublish', true, 'Publishing…');
+    msg('webMsg', 'Saving your draft…', 'info');
+    saveDraftNow()
+      .then(function () {
+        msg('webMsg', 'Publishing to the website — this takes a few seconds…', 'info');
+        return sendWebPublish(page, true);
+      })
+      .then(function (data) { webPublished(page, data, check.warnings); })
+      .catch(function (err) { if (web.page === page) msg('webMsg', err.message, 'error'); })
+      .then(function () { busy('webPublish', false); });
+  }
+
+  function webPublished(page, data, warnings) {
+    var me = A.getUser().email;
+    web.state.published[page] = data.content;
+    web.state.draft[page] = data.content;
+    web.state.rev = data.rev;
+    web.state.meta[page] = Object.assign({}, web.state.meta[page], {
+      publishedAt: data.publishedAt, publishedBy: me, draftAt: data.publishedAt, draftBy: me
+    });
+    if (web.page !== page) return;
+
+    /* Pick up the published picture addresses — unless more was typed while
+       publishing, in which case those changes win and go out next time. */
+    if (!web.unsaved) {
+      var openPaths = [];
+      document.querySelectorAll('#webEditor details[data-w-item][open]').forEach(function (el) {
+        openPaths.push(el.getAttribute('data-w-item'));
+      });
+      web.draft = S.normalise(page, data.content);
+      web.open = new WeakMap();
+      openPaths.forEach(function (path) {
+        var item = webGet(path);
+        if (item && typeof item === 'object') web.open.set(item, true);
+      });
+      rerenderWebEditor();
+      showSaved('Draft saved ' + shortStamp(data.publishedAt));
+    }
+    refreshWebStatus();
+
+    var notes = (warnings || []).concat(data.warnings || []);
+    var head = '<strong>' + esc(data.message) + '</strong>' +
+      (data.commit ? ' <a href="' + esc(data.commit.url) + '" target="_blank" rel="noopener">' +
+                     'See the change on GitHub ↗</a>' : '') +
+      (notes.length ? '<ul class="web-list-msg">' + notes.map(function (n) {
+        return '<li>' + esc(n) + '</li>';
+      }).join('') + '</ul>' : '');
+    msgHtml('webMsg', head + (data.unchanged ? '' : '<div id="webLive" class="web-live">Waiting for the ' +
+      'website to rebuild…</div>'), data.unchanged ? 'info' : 'ok');
+    if (!data.unchanged) watchLive(page, data.regions);
+  }
+
+  /**
+   * After a publish, keeps loading the live page until the new content
+   * appears — GitHub Pages usually takes under a minute — so the moderator
+   * knows when visitors can see it.
+   */
+  function watchLive(page, regions) {
+    var path = pageInfo(page).path;
+    var started = Date.now();
+    var token = {};
+    web.watch = token;
+
+    function say(html) {
+      var el = document.getElementById('webLive');
+      if (el && web.watch === token) el.innerHTML = html;
+    }
+
+    function tick() {
+      if (web.watch !== token) return;
+      fetch(path + '?live=' + Date.now(), { cache: 'no-store' })
+        .then(function (res) { return res.text(); })
+        .then(function (html) {
+          if (web.watch !== token) return;
+          var names = Object.keys(regions).filter(function (n) { return S.extract(html, n) !== null; });
+          var live = names.length > 0 && names.every(function (n) {
+            return S.sameMarkup(S.extract(html, n), regions[n]);
+          });
+          var secs = Math.round((Date.now() - started) / 1000);
+          if (live) {
+            say('<strong>✓ It’s live.</strong> <a href="' + esc(path) + '" target="_blank" rel="noopener">' +
+                'View the page ↗</a>');
+            web.watch = null;
+          } else if (secs > 420) {
+            say('The website is taking longer than usual to rebuild. It will catch up — have a look ' +
+                'at the page again in a few minutes.');
+            web.watch = null;
+          } else {
+            say('Waiting for the website to rebuild… (' + secs + 's — usually about a minute)');
+            setTimeout(tick, 8000);
+          }
+        })
+        .catch(function () { setTimeout(tick, 8000); });
+    }
+    setTimeout(tick, 5000);
+  }
+
+  /* ── Publish history ── */
+
+  function viewWebsiteHistory() {
+    loading('Loading the publish history…');
+    A.call('webHistory').then(function (data) {
+      var rows = data.history.map(function (h) {
+        var pill = h.result === 'published' ? 'green' : (h.result === 'failed' ? 'gold' : 'grey');
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + esc(shortStamp(h.publishedAt, true)) +
+            '<div class="adm-hint">' + esc(h.publishedBy) + '</div></td>' +
+          '<td style="white-space:nowrap;">' + esc(h.pageLabel) + '</td>' +
+          '<td>' + esc(h.summary || '—') +
+            (h.error ? '<div class="adm-hint">' + esc(h.error) + '</div>' : '') +
+            (h.warnings ? '<div class="adm-hint">' + esc(h.warnings) + '</div>' : '') + '</td>' +
+          '<td style="white-space:nowrap;"><span class="adm-pill ' + pill + '">' + esc(h.result) + '</span>' +
+            (h.commitUrl
+              ? '<div class="adm-hint"><a href="' + esc(h.commitUrl) + '" target="_blank" rel="noopener">' +
+                'Change <code>' + esc(h.commit.slice(0, 7)) + '</code> ↗</a></div>'
+              : '') + '</td>' +
+          '<td>' + (h.hasContent
+            ? '<button class="adm-btn small secondary" type="button" data-w-restore="' +
+              esc(h.publishId) + '">Restore</button>'
+            : '') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      elView.innerHTML = panel('Publish History',
+        'Every time a page is published from here: who did it, what changed, and the change it made ' +
+        'on GitHub. <strong>Restore</strong> puts that version back into the page’s draft — nothing ' +
+        'changes on the website until it is published again.',
+        '<div class="adm-msg" id="webHistMsg"></div>' +
+        '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
+          '<th>Published</th><th>Page</th><th>What changed</th><th>Result</th><th></th>' +
+        '</tr></thead><tbody>' +
+        (rows || '<tr><td colspan="5">Nothing has been published from here yet.</td></tr>') +
+        '</tbody></table></div>');
+
+      elView.querySelectorAll('[data-w-restore]').forEach(function (btn) {
+        btn.addEventListener('click', function () { restoreWebVersion(btn); });
+      });
+    }).catch(webFail);
+  }
+
+  function restoreWebVersion(btn) {
+    btn.disabled = true;
+    A.call('webSnapshot', { publishId: btn.getAttribute('data-w-restore') }).then(function (snap) {
+      return A.call('webSaveDraft', { page: snap.page, content: snap.content }).then(function () {
+        web.notice = {
+          kind: 'info',
+          html: 'The version published ' + esc(stampText(snap.publishedAt)) + ' is back in the draft. ' +
+                'Check it in the preview, then press <strong>Publish</strong> to put it on the website.'
+        };
+        window.location.hash = '#/website/' + snap.page;
+      });
+    }).catch(function (err) {
+      btn.disabled = false;
+      msg('webHistMsg', err.message, 'error');
+    });
+  }
+
+  /* ── Settings: Website Publishing ── */
+
+  function viewWebsiteSettings() {
+    loading('Loading the publishing settings…');
+    return A.call('webSettings').then(function (data) {
+      var s = data.settings;
+      elView.innerHTML = panel('Website Publishing',
+        'Publishing writes the edited pages straight into the website’s GitHub repository, and ' +
+        'GitHub Pages rebuilds the site from there. That needs a GitHub access token. It is kept in ' +
+        'the Apps Script’s own properties — never in the spreadsheet — and is never shown back here ' +
+        'in full.',
+        '<div class="adm-msg" id="webSetMsg"></div>' +
+        '<form class="adm-form" id="webSetForm">' +
+          field('GitHub access token',
+            '<input type="password" id="webToken" autocomplete="off" placeholder="' +
+            (s.tokenSet ? 'Saved — leave blank to keep it' : 'github_pat_…') + '">',
+            s.tokenSet
+              ? 'A token is saved (' + esc(s.tokenHint) + '). Paste a new one to replace it.'
+              : 'See below for how to make one.') +
+          '<div class="adm-grid-2">' +
+            field('Repository', '<input type="text" id="webRepo" value="' + esc(s.repo) + '">',
+                  'owner/name, as on GitHub.') +
+            field('Branch', '<input type="text" id="webBranch" value="' + esc(s.branch) + '">',
+                  'The branch GitHub Pages builds the site from.') +
+          '</div>' +
+          '<div class="adm-actions">' +
+            '<button class="adm-btn" type="submit" id="webSetSave">Save Settings</button>' +
+            (s.tokenSet
+              ? '<button class="adm-btn secondary" type="button" id="webSetTest">Test the Connection</button>' +
+                '<button class="adm-btn secondary" type="button" id="webSetClear">Remove the Token</button>'
+              : '') +
+          '</div>' +
+        '</form>' +
+        '<h3 class="web-h3">Making a token</h3>' +
+        '<ol class="web-steps">' +
+          '<li>Sign in to GitHub as the account that owns <code>' + esc(s.repo) + '</code>.</li>' +
+          '<li>Open <strong>Settings › Developer settings › Personal access tokens › Fine-grained ' +
+            'tokens</strong> and press <strong>Generate new token</strong>.</li>' +
+          '<li>Call it <em>WynLife website publishing</em>. Give it the longest expiry you are ' +
+            'comfortable with, and put a reminder in the calendar to renew it.</li>' +
+          '<li>Under <strong>Repository access</strong>, choose <em>Only select repositories</em> and ' +
+            'pick <code>' + esc(s.repo) + '</code>.</li>' +
+          '<li>Under <strong>Permissions › Repository permissions</strong>, set <strong>Contents</strong> ' +
+            'to <em>Read and write</em>. Nothing else is needed.</li>' +
+          '<li>Generate it, copy it, paste it above, press <strong>Save Settings</strong>, then ' +
+            '<strong>Test the Connection</strong>.</li>' +
+        '</ol>' +
+        '<p class="adm-sub">The branch is protected so that code changes go through a pull request. ' +
+          'Publishing writes to it directly, so the token’s account has to be on that rule’s bypass ' +
+          'list (GitHub › the repository › Settings › Rules) — the repository’s owner already is. ' +
+          'The test checks this for you.</p>' +
+        (s.imageFolderUrl
+          ? '<p class="adm-sub">Uploaded pictures wait in <a href="' + esc(s.imageFolderUrl) + '" ' +
+            'target="_blank" rel="noopener">this Drive folder</a> until their page is published; the ' +
+            'website then serves its own copy from the repository.</p>'
+          : ''));
+
+      on('webSetForm', 'submit', function (e) {
+        e.preventDefault();
+        busy('webSetSave', true, 'Saving…');
+        A.call('webSaveSettings', {
+          githubToken: document.getElementById('webToken').value,
+          repo: val('webRepo'),
+          branch: val('webBranch')
+        }).then(function (result) {
+          return viewWebsiteSettings().then(function () { msg('webSetMsg', result.message, 'ok'); });
+        }).catch(function (err) {
+          busy('webSetSave', false);
+          msg('webSetMsg', err.message, 'error');
+        });
+      });
+
+      on('webSetTest', 'click', function () {
+        busy('webSetTest', true, 'Testing…');
+        A.call('webTestSettings').then(function (result) {
+          msgHtml('webSetMsg', esc(result.message) +
+            (result.warning ? '<br><strong>' + esc(result.warning) + '</strong>' : ''),
+            result.warning ? 'error' : 'ok');
+        }).catch(function (err) {
+          msg('webSetMsg', err.message, 'error');
+        }).then(function () { busy('webSetTest', false); });
+      });
+
+      on('webSetClear', 'click', function () {
+        busy('webSetClear', true, 'Removing…');
+        A.call('webSaveSettings', { clearGithubToken: true }).then(function () {
+          return viewWebsiteSettings().then(function () {
+            msg('webSetMsg', 'The token has been removed. Nothing can be published until a new ' +
+                'one is saved.', 'info');
+          });
+        }).catch(function (err) {
+          busy('webSetClear', false);
+          msg('webSetMsg', err.message, 'error');
+        });
+      });
+    }).catch(webFail);
   }
 
   start();

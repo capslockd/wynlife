@@ -106,24 +106,28 @@ permalink: /church-online/
       <li id="nav-gatherings">
         <a href="/gatherings/">Gatherings</a>
         <div class="nav-dropdown">
+          <!-- cms:menu-gatherings · managed in /admin/ -->
           <a href="/gatherings/#wednesday-prayer">Wednesday Night Prayer</a>
           <a href="/gatherings/#life-groups">Life Groups</a>
           <a href="/gatherings/#youth">Youth Sunday</a>
           <a href="/gatherings/#sunday-school">Sunday School</a>
           <a href="/gatherings/#mens-group">Men's Group</a>
           <a href="/gatherings/#womens-group">Women's Group</a>
+          <!-- /cms:menu-gatherings -->
         </div>
       </li>
       <li id="nav-online"><a href="/church-online/">Church Online</a></li>
       <li id="nav-whatson">
         <a href="/whats-on/">What's On</a>
         <div class="nav-dropdown">
+          <!-- cms:menu-whatson · managed in /admin/ -->
           <a href="/whats-on/#bible-reading">This Week's Bible Reading</a>
           <a href="/whats-on/#food-bank">Food Bank</a>
           <a href="/whats-on/#fellowship-lunch">Fellowship Lunch</a>
           <a href="/whats-on/#mens-book-study">Men's Book Study</a>
           <a href="/whats-on/#womens-book-study">Women's Book Study</a>
           <a href="/whats-on/#announcements">Other Announcements</a>
+          <!-- /cms:menu-whatson -->
         </div>
       </li>
       <li id="nav-nextsteps">
@@ -188,12 +192,14 @@ permalink: /church-online/
         <button class="mob-nav-toggle" aria-label="Expand Gatherings">&#8964;</button>
       </div>
       <div class="mob-nav-sub">
+        <!-- cms:menu-gatherings · managed in /admin/ -->
         <a href="/gatherings/#wednesday-prayer">Wednesday Night Prayer</a>
         <a href="/gatherings/#life-groups">Life Groups</a>
         <a href="/gatherings/#youth">Youth Sunday</a>
         <a href="/gatherings/#sunday-school">Sunday School</a>
         <a href="/gatherings/#mens-group">Men's Group</a>
         <a href="/gatherings/#womens-group">Women's Group</a>
+        <!-- /cms:menu-gatherings -->
       </div>
     </li>
 
@@ -209,12 +215,14 @@ permalink: /church-online/
         <button class="mob-nav-toggle" aria-label="Expand What's On">&#8964;</button>
       </div>
       <div class="mob-nav-sub">
+        <!-- cms:menu-whatson · managed in /admin/ -->
         <a href="/whats-on/#bible-reading">This Week's Bible Reading</a>
         <a href="/whats-on/#food-bank">Food Bank</a>
         <a href="/whats-on/#fellowship-lunch">Fellowship Lunch</a>
         <a href="/whats-on/#mens-book-study">Men's Book Study</a>
         <a href="/whats-on/#womens-book-study">Women's Book Study</a>
         <a href="/whats-on/#announcements">Other Announcements</a>
+        <!-- /cms:menu-whatson -->
       </div>
     </li>
 
@@ -303,19 +311,23 @@ permalink: /church-online/
 
         <div class="btn-row mt-32" class="btn-row" style="display:flex;gap:14px;flex-wrap:wrap;">
           <a href="https://www.youtube.com/@wynlifechurch" target="_blank" class="btn btn-primary">Visit YouTube Channel</a>
-          <a href="https://www.youtube.com/live/SJ-hWTh7Lnc?si=nZqU3tasU1VsdAUQ" target="_blank" class="btn btn-outline">Watch Latest Service</a>
+          <!-- cms:online-watch-link · managed in /admin/ -->
+          <a href="https://www.youtube.com/watch?v=SJ-hWTh7Lnc" target="_blank" rel="noopener" class="btn btn-outline">Watch Latest Service</a>
+          <!-- /cms:online-watch-link -->
         </div>
       </div>
 
       <!-- Video player: thumbnail click-to-play avoids Error 153 on restricted live streams -->
       <div>
-        <div class="yt-thumb" id="ytThumb" onclick="loadVideo()">
+        <!-- cms:online-player · managed in /admin/ -->
+        <div class="yt-thumb" id="ytThumb" role="button" tabindex="0" aria-label="Play the video: WynLife Church — Watch on YouTube" data-embed="https://www.youtube.com/embed/SJ-hWTh7Lnc?autoplay=1&amp;rel=0">
           <img src="/assets/church-online/hero.JPG" alt="Watch WynLife Church">
           <div class="yt-play">
             <div class="yt-play-btn">&#9654;</div>
           </div>
           <div class="yt-label">WynLife Church — Watch on YouTube</div>
         </div>
+        <!-- /cms:online-player -->
         <div class="video-iframe-wrap" id="ytFrame">
           <iframe
             id="ytIframe"
@@ -397,12 +409,14 @@ permalink: /church-online/
     <div class="footer-col">
       <h4>Gatherings</h4>
       <ul>
+        <!-- cms:footer-gatherings · managed in /admin/ -->
         <li><a href="/gatherings/#wednesday-prayer">Wednesday Night Prayer</a></li>
         <li><a href="/gatherings/#life-groups">Life Groups</a></li>
-        <li><a href="/gatherings/#sunday-school">Sunday School</a></li>
         <li><a href="/gatherings/#youth">Youth Sunday</a></li>
+        <li><a href="/gatherings/#sunday-school">Sunday School</a></li>
         <li><a href="/gatherings/#mens-group">Men's Group</a></li>
         <li><a href="/gatherings/#womens-group">Women's Group</a></li>
+        <!-- /cms:footer-gatherings -->
       </ul>
     </div>
     <div class="footer-col">
@@ -435,12 +449,29 @@ permalink: /church-online/
 </footer>
 <script src="/nav.js"></script>
 <script>
+  /* The video to play is the player's data-embed, which the management app
+     writes when a moderator updates the livestream link. Listening on the
+     document keeps this working however often that markup is replaced. */
   function loadVideo() {
-    document.getElementById('ytThumb').style.display = 'none';
-    const frame = document.getElementById('ytFrame');
-    frame.style.display = 'block';
-    document.getElementById('ytIframe').src = 'https://www.youtube.com/embed/SJ-hWTh7Lnc?autoplay=1&rel=0';
+    var thumb = document.getElementById('ytThumb');
+    var embed = thumb && thumb.getAttribute('data-embed');
+    if (!embed) {
+      window.open('https://www.youtube.com/@wynlifechurch', '_blank', 'noopener');
+      return;
+    }
+    thumb.style.display = 'none';
+    document.getElementById('ytFrame').style.display = 'block';
+    document.getElementById('ytIframe').src = embed;
   }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('#ytThumb')) loadVideo();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.id === 'ytThumb' && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      loadVideo();
+    }
+  });
 </script>
 </body>
 </html>

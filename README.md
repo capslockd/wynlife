@@ -87,16 +87,28 @@ To use `www.wynlife.com.au`:
 
 ## Making Updates
 
-### Updating text content
-Open the relevant `.html` file and edit the text directly. Commit and push — changes go live within ~1 minute.
+### The weekly changes: use the management app
+The livestream link, What's On (announcements, events, Food Bank, book
+studies), the Gatherings page and the cards on the home page are edited at
+**[/admin/](https://www.wynlife.com.au/admin/) › Website** by a Website
+Moderator or an admin — with a live preview, pictures uploaded straight from a
+phone, and a **Publish** button that updates the site in about a minute. Those
+parts of the pages sit between `<!-- cms:… -->` comments; don't edit inside
+them by hand, because the next publish replaces them. See
+[`apps-script/README.md`](apps-script/README.md#keeping-the-website-up-to-date).
+
+### Updating other text content
+Open the relevant `.html` file and edit the text directly (outside any `cms:`
+region). Commit and push — changes go live within ~1 minute. Publishing from
+the management app also commits to `main`, so pull first.
 
 ### Replacing an image
 1. Add the new image to the correct subfolder inside `assets/` (e.g. `assets/about/head_pastor.JPG`)
 2. Make sure the filename matches exactly what is referenced in the HTML
 3. Commit and push
 
-### Adding a new announcement (What's On)
-Open `whats-on.html` and add a new two-column block inside the `#announcements` section, following the same pattern as the existing ones.
+Pictures on the pages edited in the management app are uploaded there instead;
+they are published to `assets/uploads/`.
 
 ### Updating service times or contact details
 - **Service times strip** — edit the `.service-strip` block in `index.html`
