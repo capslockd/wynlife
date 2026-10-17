@@ -14,7 +14,7 @@
  * recipient, so nobody sees anybody else's address and each copy carries its
  * own unsubscribe link.
  *
- * Configure Brevo from the admin console (Newsletter > Settings), or from the
+ * Configure Brevo from the admin console (Settings > Email Settings), or from the
  * Apps Script editor by running setBrevoKey() once. The key is kept in Script
  * Properties, never in the spreadsheet.
  ****************************************************************************/
@@ -489,7 +489,7 @@ function nlRequireSendable_(body) {
   var settings = nlSettings_();
   if (!settings.apiKey) {
     throw new Error('No Brevo API key is configured yet. An administrator needs to ' +
-                    'add one under Newsletter > Settings.');
+                    'add one under Settings > Email Settings.');
   }
   if (!str_(body.subject)) throw new Error('The newsletter needs a subject line.');
   if (!str_(body.html)) throw new Error('The newsletter has no content to send.');

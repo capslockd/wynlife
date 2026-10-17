@@ -5,7 +5,9 @@ This guide provides instructions for updating the WynLife Church website content
 ## Project Overview
 
 The WynLife Church website is built with:
-- Static HTML files (no CMS)
+- Static HTML files. Parts of four pages (Home, Gatherings, Church Online,
+  What's On) are edited by moderators in `/admin/` and published into those
+  files as plain HTML — see **Website** under the Church Management App below
 - CSS styling (style.css)
 - JavaScript for interactive elements (nav.js)
 - Responsive design that works on mobile and desktop
@@ -40,71 +42,40 @@ The page for online services:
 
 ## How to Update Common Sections
 
-### A. Updating Announcements in "What's On" Section
+The everyday changes are made in the management app, not in the HTML:
 
-**Location:** `whats-on.html`, specifically the `#announcements` section (lines 370-400)
+| To change | Go to `/admin/` › |
+|---|---|
+| The livestream on Church Online | **Website › Church Online** — paste the YouTube link |
+| Announcements, events, Food Bank dates, book studies, the Bible reading link | **Website › What's On** |
+| Gatherings — times, words, pictures, contacts, the term's Sunday School lessons | **Website › Gatherings** |
+| The *Our Gatherings* and *What's On* cards on the home page | **Website › Home Page** |
 
-**Update Process:**
-1. Find the `#announcements` section in `whats-on.html`
-2. Look for existing announcement blocks:
-   - The "2026 Entrance Update" block (lines 376-385)
-   - The "Set Free 2-day Retreat" block (lines 387-399)
+Each of those places sits in its page between a pair of comments:
 
-**For adding a new announcement:**
-1. Copy one of the existing announcement blocks
-2. Modify the content within that block:
-   - Update the title in `<h3>` tag
-   - Change the description text
-   - Update dates, times, and details
-   - Adjust image source if needed
-
-**Example structure for a new announcement:**
 ```html
-<div class="two-col img-right mt-48" style="align-items:start;padding-top:40px;border-top:1px solid var(--border);">
-  <div>
-    <img src="/assets/whats-on/new_announcement.png" alt="New Announcement Title" class="photo-contain">
-  </div>
-  <div>
-    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">&#127759; Upcoming Event</div>
-    <h3 style="font-family:'Merriweather',serif;font-size:1.5rem;color:var(--navy);margin-bottom:14px;line-height:1.3;">New Announcement Title</h3>
-    <p style="font-size:1rem;color:var(--gray);line-height:1.7;max-width:540px;">Description of the new announcement...</p>
-    <p style="font-size:0.92rem;color:var(--gray);line-height:1.7;margin-top:12px;">Additional details or dates...</p>
-  </div>
-</div>
+<!-- cms:whatson-sections · managed in /admin/ -->
+…generated HTML…
+<!-- /cms:whatson-sections -->
 ```
 
-### B. Updating the Online Sermon Link
+**Do not edit inside a `cms:` region by hand** — the next publish from the
+console rewrites the whole region from what is saved in the sheet, and your
+edit is lost (the publish log records a warning when it happens). Anything
+outside the markers is yours to edit as before. If something inside a region
+needs changing:
 
-**Location:** `church-online.html`, specifically the video player section (lines 293-314)
+- **Words, pictures, links, order** — change it in the console and publish.
+- **The design** — the markup each region is built from — change the renderer
+  in `site-content.js`. It reaches the live pages the next time any page is
+  published, because every publish re-renders every region.
+- **Defaults** — `defaults()` in `site-content.js` is only what a page starts
+  from until it is first published from the console; after that, the sheet is
+  the source of truth.
 
-**Update Process:**
-1. Find the `#ytThumb` div and the `#ytFrame` div
-2. Locate the `src` attribute in the iframe within `#ytFrame`
-3. Update the YouTube video ID in the URL
-
-**Current setup (line 304):**
-```html
-<iframe id="ytIframe" src="https://www.youtube.com/embed/ocQcNW8ja2E?autoplay=1&rel=0" title="WynLife Church Live" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-```
-
-**To update:**
-1. Get the new YouTube video ID from the URL (e.g., for `https://www.youtube.com/watch?v=ocQcNW8ja2E`, the ID is `ocQcNW8ja2E`)
-2. Replace the ID in the iframe src attribute with the new one
-
-**Example of updated link:**
-```html
-<iframe id="ytIframe" src="https://www.youtube.com/embed/new_video_id?autoplay=1&rel=0" title="WynLife Church Live" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-```
-
-### C. Other Frequently Updated Sections
-
-**Bible Reading Section (`whats-on.html`):**
-- Update the link to study materials in line 230
-- The current link is: `https://www.ttb.org/`
-
-**Upcoming Events:**
-- Add new events to the announcements section
-- Ensure proper formatting with consistent styling
+The site menu's *Gatherings* and *What's On* dropdowns (desktop and mobile) and
+the footer's *Gatherings* list are `cms:` regions on **every** page, generated
+from the sections of those two pages.
 
 ## General Update Guidelines
 
@@ -134,16 +105,20 @@ The page for online services:
 ├── pray.html               # Contact/Prayer page
 ├── style.css               # Main stylesheet
 ├── nav.js                  # Navigation JavaScript
+├── site-content.js         # The editable regions: content model + HTML renderers
 └── assets/                 # Media files (images, videos)
     ├── shared/             # Shared images
     ├── whats-on/           # What's On related images  
     ├── church-online/      # Church Online images
+    ├── uploads/            # Pictures published from /admin/ › Website, by year
     └── ...                 # Other directories
 ```
 
 ## Deployment Notes
 
-The website is hosted on a static server. Updates should be made to the appropriate HTML files directly. No special deployment steps are required beyond updating the files.
+The website is hosted on GitHub Pages from `main`. Updates are made to the HTML
+files directly, except inside `cms:` regions (see above). Publishing from
+`/admin/` commits to `main` itself, so pull before you push.
 
 ## Church Management App (`/admin/`)
 
@@ -155,32 +130,41 @@ Google Apps Script web app.
 | File | Purpose |
 |---|---|
 | `admin.html` | Console shell (`/admin/`) — nav, topbar, login card, menu + view slots |
-| `admin.js` | Views and routing for Manage / Reports / Tracking |
+| `admin.js` | Views, routing and the menu — Members & Sundays / Newsletter / Website / Settings |
 | `admin-api.js` | Shared API client, session handling, date helpers |
 | `admin-config.js` | **The one file to edit** — holds the Apps Script `/exec` URL |
 | `admin.css` | Console and kiosk styling (uses `style.css` variables) |
 | `newsletter-templates.js` | The three email designs — turns one content object into sendable HTML |
+| `site-content.js` | The website's editable regions — content defaults and the HTML for each region |
 | `sunday-school-checkin.html` / `.js` | Parent-facing sign in / sign out kiosk (no login) |
 | `apps-script/Code.gs` | The backend: sheet setup, auth, members, attendance, reports |
 | `apps-script/Newsletter.gs` | The newsletter backend: recipients, issues, Brevo, unsubscribe |
+| `apps-script/Website.gs` | The website backend: drafts, picture uploads, publishing to GitHub |
 | `apps-script/README.md` | One-time setup, sheet layouts, roles, security notes |
 
 The `apps-script` folder is excluded from the Jekyll build, and both new pages
 are `noindex` and disallowed in `robots.txt`.
 
+The menu has one group per job — **Members & Sundays**, **Newsletter**,
+**Website**, **Settings** — and every screen is a route in `ROUTES` in
+`admin.js`, gated by a minimum role or a capability. A screen the signed-in role
+cannot open is left out of the menu rather than greyed out, so each person sees
+only their own tools.
+
 Roles are `basic` (reports), `planner` (+ members and tracking) and `admin`
-(+ user management and the Brevo settings). Those three stack by rank.
-`email` — **Email Administrator** — deliberately does not: it ranks *below*
-`basic` and gets the newsletter screens through the `newsletter` capability in
-`ROLE_CAPS`, so it can compose and send the newsletter and touch nothing else.
+(+ user management, the newsletter, the website, and the Brevo and GitHub
+settings). Those three stack by rank. Two roles deliberately do not: `email` —
+**Email Administrator** — and `moderator` — **Website Moderator** — rank
+*below* `basic` and get their screens through the `newsletter` and `website`
+capabilities in `ROLE_CAPS`, so each does its one job and touches nothing else.
 `ROLE_CAPS` is mirrored in `Code.gs` (which enforces it) and `admin-api.js`
-(which only greys out menu items) — keep the two in step.
+(which only decides what the menu shows) — keep the two in step.
 
 At sign-in at the kiosk the parent chooses their own
 4-digit **collection PIN** which they must give back to sign the child out,
 and no child can be collected until 15 minutes after sign-in
-(`MIN_CARE_MINUTES`); staff can see the PIN on *Tracking > Setup Sunday
-School*. Read
+(`MIN_CARE_MINUTES`); staff can see the PIN on *Members & Sundays > Setup
+Sunday School*. Read
 `apps-script/README.md` before changing anything here — a schema change there
 needs `setup()` re-run on the sheet.
 
@@ -223,6 +207,49 @@ passed through. Deliberately **not** WebP — Outlook on Windows cannot render
 it. Anything committed to `assets/newsletter/` should get the same treatment
 by hand; the images there are already JPEG except the three logos, which need
 their alpha.
+
+### Website
+
+*Website > Home Page / Gatherings / Church Online / What's On* edit the `cms:`
+regions of those pages, with the real page beside the form as a live preview
+(loaded from the site itself; each region is swapped in place as you type, by
+`WynSite.applyToDocument`). Drafts save to the **Website Content** sheet as you
+type; **Publish** sends the page's content and the HTML of every region to
+`Website.gs`, which writes the regions into the files on GitHub between their
+markers, copies new pictures into `assets/uploads/`, moves the page's
+`<lastmod>` in `sitemap.xml`, and commits it all in one commit on `main`. The
+console then polls the live page until the new HTML appears.
+
+As with the newsletter, the HTML is rendered **in the browser** by one copy of
+the design, `site-content.js`; the sheet stores only content JSON. The backend
+never builds HTML — it only checks the regions (known names, no script,
+handlers, `javascript:` links or comments) and splices them in. Keep
+`REGIONS` in `site-content.js` and `WEB_REGIONS` / `WEB_FILES` in `Website.gs`
+in step, and when you add a marker to a page, add its file to `WEB_FILES`.
+
+Every publish renders **all** regions — the menus on every page and the home
+page's Sunday School panel are built from more than one page's content — from
+the page being published plus the live content of the others. A revision
+counter (`WEB_REV`) makes a publish from a stale editor fail with `code:
+'stale'`, and the console reloads the others' content and retries once.
+
+Content text uses a small shorthand, rendered by `WynSite.inline`:
+`**bold**`, `*italic*`, `[text](url)`, a blank line between paragraphs, and a
+single line break kept as `<br>`. Links and pictures pass through `safeUrl` /
+`safeImage`, so nothing typed can become a script.
+
+Uploads go through the same `prepareImage` as the newsletter, with the sizes in
+`WEB_IMAGE_SIZES` (2000px for banners, 1600px otherwise), and wait on Drive
+(*WynLife Website Images*) until the page is published; the published page links
+to the copy in the repository, never to Drive. Section pictures are deliberately
+not lazy-loaded: many are posters with no fixed height, and a late one would
+push a section reached from a menu link (`#mens-group`) off the top of the
+screen.
+
+Publishing needs a fine-grained GitHub token with *Contents: read and write* on
+this repository (Settings > Website Publishing), from an account on the
+`protect-main` rule's bypass list. Setup and the security notes are in
+`apps-script/README.md`.
 
 ## Common Issues and Solutions
 

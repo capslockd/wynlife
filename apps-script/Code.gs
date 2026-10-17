@@ -11,9 +11,11 @@
  *   Newsletter Recipients    — the email list the newsletter goes out to
  *   Newsletter Issues        — how each week's newsletter was composed, and by whom
  *   Newsletter Send Log      — one row per recipient per send
+ *   Website Content          — the draft and live content of each editable web page
+ *   Website Publish Log      — one row per website publish
  *
- * The newsletter code lives in Newsletter.gs — paste that file into the same
- * Apps Script project.
+ * The newsletter code lives in Newsletter.gs and the website editor's in
+ * Website.gs — paste both into the same Apps Script project.
  *
  * Deployment: Deploy > New deployment > Web app
  *   Execute as:  Me
@@ -32,7 +34,9 @@ var SHEETS = {
   users:        'App Users',
   recipients:   'Newsletter Recipients',
   newsletters:  'Newsletter Issues',
-  sendLog:      'Newsletter Send Log'
+  sendLog:      'Newsletter Send Log',
+  webContent:   'Website Content',
+  webLog:       'Website Publish Log'
 };
 
 var HEADERS = {
@@ -69,6 +73,14 @@ var HEADERS = {
   sendLog: [
     'Log ID', 'Newsletter ID', 'Issue Date', 'Subject', 'Email', 'Kind',
     'Result', 'Provider Message ID', 'Error', 'Sent By', 'Sent At'
+  ],
+  webContent: [
+    'Page', 'Draft JSON', 'Draft Updated By', 'Draft Updated At',
+    'Published JSON', 'Published By', 'Published At', 'Published Commit'
+  ],
+  webLog: [
+    'Publish ID', 'Page', 'Summary', 'Result', 'Commit', 'Files Changed',
+    'Images Added', 'Warnings', 'Error', 'Content JSON', 'Published By', 'Published At'
   ]
 };
 
@@ -80,20 +92,22 @@ var BOOTSTRAP_ADMIN = {
   role: 'admin'
 };
 
-var ROLES = ['basic', 'planner', 'admin', 'email'];
+var ROLES = ['basic', 'planner', 'admin', 'email', 'moderator'];
 
 /* The first three roles stack: planner can do everything basic can, and so
-   on. "email" sits outside that ladder — an Email Administrator composes and
-   sends the newsletter and touches nothing else — so it ranks below basic and
-   earns its access through ROLE_CAPS instead. */
-var ROLE_RANK = { email: 0, basic: 1, planner: 2, admin: 3 };
+   on. "email" and "moderator" sit outside that ladder — an Email
+   Administrator composes and sends the newsletter, a Website Moderator edits
+   the public website, and neither touches anything else — so they rank below
+   basic and earn their access through ROLE_CAPS instead. */
+var ROLE_RANK = { email: 0, moderator: 0, basic: 1, planner: 2, admin: 3 };
 
 /* Capabilities that are not simply "rank at least X". */
 var ROLE_CAPS = {
-  basic:   [],
-  planner: [],
-  admin:   ['newsletter'],
-  email:   ['newsletter']
+  basic:     [],
+  planner:   [],
+  admin:     ['newsletter', 'website'],
+  email:     ['newsletter'],
+  moderator: ['website']
 };
 
 var SESSION_HOURS = 12;
@@ -143,9 +157,12 @@ function setup() {
   formatColumn_(SHEETS.newsletters, 'Issue Date', 'yyyy-mm-dd');
   formatColumn_(SHEETS.sendLog, 'Issue Date', 'yyyy-mm-dd');
 
-  /* The stored newsletter content is a long blob of JSON — auto-sizing would
-     stretch that column across the screen. */
+  /* The stored newsletter and website content are long blobs of JSON —
+     auto-sizing would stretch those columns across the screen. */
   narrowColumn_(SHEETS.newsletters, 'Content JSON', 260);
+  narrowColumn_(SHEETS.webContent, 'Draft JSON', 260);
+  narrowColumn_(SHEETS.webContent, 'Published JSON', 260);
+  narrowColumn_(SHEETS.webLog, 'Content JSON', 260);
 
   /* Remove the default "Sheet1" if it is empty and unused. */
   var stray = ss.getSheetByName('Sheet1');
@@ -269,6 +286,17 @@ function handle_(body) {
       case 'nlSend':             return apiNlSend_(session, body);
       case 'nlSettings':         return apiNlSettings_(session);
       case 'nlSaveSettings':     return apiNlSaveSettings_(session, body);
+
+      /* Website — see Website.gs */
+      case 'webState':           return apiWebState_(session);
+      case 'webSaveDraft':       return apiWebSaveDraft_(session, body);
+      case 'webUploadImage':     return apiWebUploadImage_(session, body);
+      case 'webPublish':         return apiWebPublish_(session, body);
+      case 'webHistory':         return apiWebHistory_(session);
+      case 'webSnapshot':        return apiWebSnapshot_(session, body);
+      case 'webSettings':        return apiWebSettings_(session);
+      case 'webSaveSettings':    return apiWebSaveSettings_(session, body);
+      case 'webTestSettings':    return apiWebTestSettings_(session);
 
       default: return { ok: false, error: 'Unknown action: ' + action };
     }
